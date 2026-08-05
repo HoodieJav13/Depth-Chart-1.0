@@ -1,0 +1,30 @@
+{
+  "players": [
+    { "id": "p01", "name": "Reid Alcaraz" },
+    { "id": "p02", "name": "Jonathan Molina" },
+    { "id": "p03", "name": "William Witwer" },
+    { "id": "p04", "name": "Malachi" },
+    { "id": "p05", "name": "Matthew" },
+    { "id": "p06", "name": "Tristan Lee" },
+    { "id": "p07", "name": "Ryan Adams" },
+    { "id": "p08", "name": "Skyler Pasternak" },
+    { "id": "p09", "name": "Ayden Dougherty" },
+    { "id": "p10", "name": "Aiden Gentry" },
+    { "id": "p11", "name": "Lucas Kiefer" },
+    { "id": "p12", "name": "Andres Chavez" },
+    { "id": "p13", "name": "Kaiden Lucero" },
+    { "id": "p14", "name": "Elias Saliz" },
+    { "id": "p15", "name": "Kaden Lindblom" },
+    { "id": "p16", "name": "Anthony James" },
+    { "id": "p17", "name": "Landon Ortiz" },
+    { "id": "p18", "name": "Sam Santi" },
+    { "id": "p19", "name": "Niko Cupp" },
+    { "id": "p20", "name": "Preston Diaz" },
+    { "id": "p21", "name": "Liam Brown" },
+    { "id": "p22", "name": "Jackson Greene" },
+    { "id": "p23", "name": "Ethan Saiz" },
+    { "id": "p24", "name": "Damien Aplin" },
+    { "id": "p25", "name": "Ryder Sisk" },
+    { "id": "p26", "name": "Mikey" }
+  ]
+}
