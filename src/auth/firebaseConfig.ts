@@ -3,6 +3,7 @@ export interface FirebaseWebConfig {
   authDomain: string;
   projectId: string;
   storageBucket: string;
+  messagingSenderId: string;
   appId?: string;
 }
 
@@ -13,5 +14,6 @@ export const firebaseConfig: FirebaseWebConfig = {
   authDomain: "depth-chart-1d8be.firebaseapp.com",
   projectId: "depth-chart-1d8be",
   storageBucket: "depth-chart-1d8be.firebasestorage.app",
+  messagingSenderId: "404425188513",
   ...(optionalAppId ? { appId: optionalAppId } : {}),
 };
