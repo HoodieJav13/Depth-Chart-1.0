@@ -1,8 +1,14 @@
+const apiKey = "AIzaSyDXwsb3V0PjXbU9sR9cvllmXFZ7IaMpomY";
 const targets = [
   ["hosting-init", "https://depth-chart-1d8be.web.app/__/firebase/init.json"],
+  ["auth-public-config", `https://identitytoolkit.googleapis.com/v1/projects?key=${apiKey}`],
   [
-    "auth-public-config",
-    "https://identitytoolkit.googleapis.com/v1/projects?key=AIzaSyDXwsb3V0PjXbU9sR9cvllmXFZ7IaMpomY",
+    "firebase-web-apps-project-id",
+    `https://firebase.googleapis.com/v1beta1/projects/depth-chart-1d8be/webApps?key=${apiKey}`,
+  ],
+  [
+    "firebase-web-apps-project-number",
+    `https://firebase.googleapis.com/v1beta1/projects/404425188513/webApps?key=${apiKey}`,
   ],
 ];
 
