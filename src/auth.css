@@ -1,0 +1,232 @@
+.coach-session {
+  display: flex;
+  grid-column: 3;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.coach-session button {
+  padding: 7px 10px;
+  border: 1px solid #475963;
+  border-radius: 5px;
+  background: #111f28;
+  color: #dce4e7;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.coach-session button:hover {
+  border-color: var(--orange);
+  color: #ffc79f;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(244, 125, 35, 0.12), transparent 34%),
+    linear-gradient(180deg, #0a151e 0%, #050b10 100%);
+}
+
+.auth-card {
+  width: min(100%, 430px);
+  overflow: hidden;
+  border: 1px solid #394b56;
+  border-radius: 12px;
+  background: rgba(10, 22, 31, 0.97);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #2e3d46;
+  background: #0b1720;
+}
+
+.auth-brand > span {
+  display: grid;
+  width: 48px;
+  height: 52px;
+  place-items: center;
+  clip-path: polygon(20% 0, 80% 0, 100% 20%, 100% 74%, 50% 100%, 0 74%, 0 20%);
+  background: var(--orange);
+  color: #16100c;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: 1.7rem;
+}
+
+.auth-brand p,
+.auth-brand h1 {
+  margin: 0;
+}
+
+.auth-brand p {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.auth-brand h1 {
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: 1.65rem;
+  font-weight: 500;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.auth-form,
+.auth-denied {
+  display: grid;
+  padding: 24px;
+}
+
+.auth-intro,
+.auth-denied p {
+  margin: 0 0 20px;
+  color: #aab6bd;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.auth-form label {
+  margin-bottom: 8px;
+  color: #e1e7e9;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.auth-form input {
+  width: 100%;
+  height: 48px;
+  padding: 0 13px;
+  border: 1px solid #53656f;
+  border-radius: 6px;
+  outline: none;
+  background: #111f28;
+  color: var(--text);
+  font: 700 1rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.auth-form input:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange-soft);
+}
+
+.recaptcha-container {
+  min-height: 78px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.auth-primary,
+.auth-secondary,
+.auth-denied button {
+  min-height: 46px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.auth-primary {
+  margin-top: 16px;
+  border: 1px solid var(--orange);
+  background: var(--orange);
+  color: #17100b;
+}
+
+.auth-primary:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.auth-secondary,
+.auth-denied button {
+  margin-top: 10px;
+  border: 1px solid #52636d;
+  background: #14242e;
+  color: #dce4e7;
+}
+
+.auth-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(244, 125, 35, 0.55);
+  border-radius: 5px;
+  background: rgba(244, 125, 35, 0.1);
+  color: #ffc79f;
+  font-size: 0.79rem;
+  line-height: 1.4;
+}
+
+.auth-disclaimer {
+  margin: 16px 0 0;
+  color: #778791;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.auth-denied h2 {
+  margin: 0 0 8px;
+  color: #ffc79f;
+  font-size: 1.15rem;
+}
+
+.auth-loading {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .app-header {
+    height: 154px;
+  }
+
+  .coach-session {
+    grid-column: 1;
+    justify-content: center;
+    height: 38px;
+    border-top: 1px solid #24323a;
+  }
+
+  .coach-session span {
+    display: none;
+  }
+
+  .coach-session button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .workspace {
+    min-height: calc(100dvh - 154px);
+  }
+
+  .mobile-unassigned.open {
+    top: 154px;
+  }
+
+  .auth-shell {
+    align-items: end;
+    padding: 12px max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+
+  .auth-card {
+    width: 100%;
+  }
+}

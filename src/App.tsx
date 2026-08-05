@@ -11,9 +11,11 @@ import type { DepthChartStore } from "./store/DepthChartStore";
 
 interface AppProps {
   store: DepthChartStore;
+  signedInPhoneNumber: string;
+  onSignOut: () => Promise<void>;
 }
 
-export const App = ({ store }: AppProps) => {
+export const App = ({ store, signedInPhoneNumber, onSignOut }: AppProps) => {
   const [activeFormationId, setActiveFormationId] = useState("offense-base");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [expandedPositionId, setExpandedPositionId] = useState<string | null>(null);
@@ -85,6 +87,8 @@ export const App = ({ store }: AppProps) => {
         formations={formationConfig.formations}
         activeFormationId={formation.id}
         onFormationChange={changeFormation}
+        signedInPhoneNumber={signedInPhoneNumber}
+        onSignOut={onSignOut}
       />
 
       {isLoading ? (
