@@ -42,7 +42,7 @@ interface FirebaseCompatAuthFactory {
 
 interface FirebaseCompatNamespace {
   apps: readonly unknown[];
-  initializeApp(config: Record<string, string>): unknown;
+  initializeApp(config: object): unknown;
   auth: FirebaseCompatAuthFactory;
 }
 
@@ -120,7 +120,7 @@ export const createFirebaseAuthClient = (): AuthClient => {
   }
 
   if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig as Record<string, string>);
+    firebase.initializeApp(firebaseConfig);
   }
 
   const auth = firebase.auth();
