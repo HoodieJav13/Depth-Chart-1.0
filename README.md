@@ -2,6 +2,10 @@
 
 A focused, local-first prototype for visualizing and rearranging the freshman football offense and defense depth charts.
 
+## Live app
+
+https://eldorado-depth-chart.vercel.app/
+
 ## Run locally
 
 ```bash
