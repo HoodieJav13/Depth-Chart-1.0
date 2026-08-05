@@ -204,7 +204,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
         ) : (
           <form className="auth-form" onSubmit={(event) => void requestCode(event)}>
             <p className="auth-intro">
-              Sign in with an approved coach phone number to open the shared depth chart.
+              Sign in with an approved coach phone number to open the depth chart.
             </p>
             <label htmlFor="phone-number">Phone number</label>
             <input
