@@ -2,11 +2,21 @@ import { formationConfig, roster } from "../domain/config";
 import type {
   AddPlayerInput,
   DepthChartState,
-  DepthChartStateV1,
   FormationAssignments,
   Player,
   PlayerOverride,
 } from "../domain/types";
+
+interface RawStateShape {
+  version?: unknown;
+  assignments?: unknown;
+  addedPlayers?: unknown;
+  playerOverrides?: unknown;
+  archivedPlayerIds?: unknown;
+  revision?: unknown;
+  updatedAt?: unknown;
+  updatedBy?: unknown;
+}
 
 export const emptyAssignments = (): FormationAssignments =>
   Object.fromEntries(
@@ -27,7 +37,8 @@ export const createEmptyState = (): DepthChartState => ({
   updatedBy: null,
 });
 
-export const cloneState = (state: DepthChartState): DepthChartState => structuredClone(state);
+export const cloneState = (state: DepthChartState): DepthChartState =>
+  structuredClone(state);
 
 const cleanPlayer = (value: unknown): Player | null => {
   if (!value || typeof value !== "object") return null;
@@ -35,7 +46,8 @@ const cleanPlayer = (value: unknown): Player | null => {
   const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
   const name = typeof candidate.name === "string" ? candidate.name.trim() : "";
   if (!id || !name) return null;
-  const number = typeof candidate.number === "string" ? candidate.number.trim() : null;
+  const number =
+    typeof candidate.number === "string" ? candidate.number.trim() : null;
   return { id, name, ...(number ? { number } : {}) };
 };
 
@@ -47,14 +59,24 @@ const cleanOverride = (value: unknown): PlayerOverride | null => {
     override.name = candidate.name.trim();
   }
   if (candidate.number === null) override.number = null;
-  if (typeof candidate.number === "string") override.number = candidate.number.trim() || null;
+  if (typeof candidate.number === "string") {
+    override.number = candidate.number.trim() || null;
+  }
   return Object.keys(override).length ? override : null;
 };
 
+const readAssignments = (rawAssignments: unknown): Record<string, unknown> =>
+  rawAssignments && typeof rawAssignments === "object"
+    ? (rawAssignments as Record<string, unknown>)
+    : {};
+
 export const normalizeState = (candidate: unknown): DepthChartState => {
   const next = createEmptyState();
-  const raw = candidate as Partial<DepthChartState & DepthChartStateV1> | null;
-  if (!raw || (raw.version !== 1 && raw.version !== 2)) return next;
+  if (!candidate || typeof candidate !== "object") return next;
+
+  const raw = candidate as RawStateShape;
+  if (raw.version !== 1 && raw.version !== 2) return next;
+  const version = raw.version;
 
   const seedIds = new Set(roster.players.map((player) => player.id));
   const addedIds = new Set<string>();
@@ -67,43 +89,68 @@ export const normalizeState = (candidate: unknown): DepthChartState => {
     }
   }
 
-  if (raw.version === 2 && raw.playerOverrides && typeof raw.playerOverrides === "object") {
-    for (const [playerId, value] of Object.entries(raw.playerOverrides)) {
+  if (
+    version === 2 &&
+    raw.playerOverrides &&
+    typeof raw.playerOverrides === "object"
+  ) {
+    for (const [playerId, value] of Object.entries(
+      raw.playerOverrides as Record<string, unknown>,
+    )) {
       if (!seedIds.has(playerId) && !addedIds.has(playerId)) continue;
       const override = cleanOverride(value);
       if (override) next.playerOverrides[playerId] = override;
     }
   }
 
-  const archived = raw.version === 2 && Array.isArray(raw.archivedPlayerIds)
-    ? raw.archivedPlayerIds.filter((id): id is string =>
-        typeof id === "string" && (seedIds.has(id) || addedIds.has(id)),
-      )
-    : [];
-  next.archivedPlayerIds = [...new Set(archived)];
+  const archived: string[] = [];
+  if (version === 2 && Array.isArray(raw.archivedPlayerIds)) {
+    for (const value of raw.archivedPlayerIds) {
+      if (
+        typeof value === "string" &&
+        (seedIds.has(value) || addedIds.has(value)) &&
+        !archived.includes(value)
+      ) {
+        archived.push(value);
+      }
+    }
+  }
+  next.archivedPlayerIds = archived;
 
   const validIds = new Set([...seedIds, ...addedIds]);
+  const rawAssignments = readAssignments(raw.assignments);
   for (const formation of formationConfig.formations) {
     const seen = new Set<string>();
-    const sourceFormation = raw.assignments?.[formation.id];
+    const rawFormation = rawAssignments[formation.id];
+    const sourceFormation =
+      rawFormation && typeof rawFormation === "object"
+        ? (rawFormation as Record<string, unknown>)
+        : {};
+
     for (const position of formation.positions) {
-      const source = sourceFormation?.[position.id];
+      const source = sourceFormation[position.id];
       if (!Array.isArray(source)) continue;
-      next.assignments[formation.id][position.id] = source.filter((id): id is string => {
-        if (
-          typeof id !== "string" ||
-          !validIds.has(id) ||
-          next.archivedPlayerIds.includes(id) ||
-          seen.has(id)
-        ) return false;
-        seen.add(id);
-        return true;
-      });
+      next.assignments[formation.id][position.id] = source.filter(
+        (id): id is string => {
+          if (
+            typeof id !== "string" ||
+            !validIds.has(id) ||
+            next.archivedPlayerIds.includes(id) ||
+            seen.has(id)
+          ) {
+            return false;
+          }
+          seen.add(id);
+          return true;
+        },
+      );
     }
   }
 
-  if (raw.version === 2) {
-    next.revision = Number.isFinite(raw.revision) ? Math.max(0, Number(raw.revision)) : 0;
+  if (version === 2) {
+    next.revision = Number.isFinite(raw.revision)
+      ? Math.max(0, Number(raw.revision))
+      : 0;
     next.updatedAt = typeof raw.updatedAt === "string" ? raw.updatedAt : null;
     next.updatedBy = typeof raw.updatedBy === "string" ? raw.updatedBy : null;
   }
@@ -114,7 +161,10 @@ export const effectivePlayers = (state: DepthChartState): Player[] => {
   const archived = new Set(state.archivedPlayerIds);
   return [...roster.players, ...state.addedPlayers]
     .filter((player) => !archived.has(player.id))
-    .map((player) => ({ ...player, ...(state.playerOverrides[player.id] ?? {}) }));
+    .map((player) => ({
+      ...player,
+      ...(state.playerOverrides[player.id] ?? {}),
+    }));
 };
 
 const normalizeText = (value: string | null | undefined): string =>
@@ -141,7 +191,9 @@ export const removePlayerFromAssignments = (
 ): void => {
   for (const formation of Object.values(state.assignments)) {
     for (const positionId of Object.keys(formation)) {
-      formation[positionId] = formation[positionId].filter((id) => id !== playerId);
+      formation[positionId] = formation[positionId].filter(
+        (id) => id !== playerId,
+      );
     }
   }
 };
