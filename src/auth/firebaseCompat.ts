@@ -1,4 +1,9 @@
-import type { AuthClient, AuthUser, PhoneCodeSession } from "./AuthClient";
+import type {
+  AuthClient,
+  AuthUser,
+  CoachAccessProfile,
+  PhoneCodeSession,
+} from "./AuthClient";
 import { firebaseConfig } from "./firebaseConfig";
 
 interface FirebaseCompatUser {
@@ -12,7 +17,6 @@ interface FirebaseCompatConfirmationResult {
 
 interface FirebaseCompatRecaptchaVerifier {
   clear(): void;
-  render(): Promise<number>;
 }
 
 interface FirebaseCompatAuth {
@@ -31,7 +35,7 @@ interface FirebaseCompatAuth {
 interface FirebaseCompatAuthFactory {
   (): FirebaseCompatAuth;
   RecaptchaVerifier: new (
-    containerId: string,
+    buttonId: string,
     parameters?: {
       size?: "normal" | "compact" | "invisible";
       callback?: () => void;
@@ -40,10 +44,28 @@ interface FirebaseCompatAuthFactory {
   ) => FirebaseCompatRecaptchaVerifier;
 }
 
+interface FirebaseCompatDocumentSnapshot {
+  exists: boolean;
+  data(): Record<string, unknown> | undefined;
+}
+
+interface FirebaseCompatDocumentReference {
+  get(options?: { source?: "server" | "cache" | "default" }): Promise<FirebaseCompatDocumentSnapshot>;
+}
+
+interface FirebaseCompatCollectionReference {
+  doc(documentId: string): FirebaseCompatDocumentReference;
+}
+
+interface FirebaseCompatFirestore {
+  collection(path: string): FirebaseCompatCollectionReference;
+}
+
 interface FirebaseCompatNamespace {
   apps: readonly unknown[];
   initializeApp(config: object): unknown;
   auth: FirebaseCompatAuthFactory;
+  firestore(): FirebaseCompatFirestore;
 }
 
 declare global {
@@ -63,6 +85,7 @@ class FirebaseAuthClient implements AuthClient {
   constructor(
     private readonly firebase: FirebaseCompatNamespace,
     private readonly auth: FirebaseCompatAuth,
+    private readonly firestore: FirebaseCompatFirestore,
   ) {}
 
   subscribe(
@@ -77,16 +100,15 @@ class FirebaseAuthClient implements AuthClient {
 
   async requestCode(
     phoneNumber: string,
-    recaptchaContainerId: string,
+    recaptchaButtonId: string,
   ): Promise<PhoneCodeSession> {
     this.clearVerifier();
     this.verifier = new this.firebase.auth.RecaptchaVerifier(
-      recaptchaContainerId,
-      { size: "normal" },
+      recaptchaButtonId,
+      { size: "invisible" },
     );
 
     try {
-      await this.verifier.render();
       const confirmation = await this.auth.signInWithPhoneNumber(
         phoneNumber,
         this.verifier,
@@ -100,6 +122,26 @@ class FirebaseAuthClient implements AuthClient {
       this.clearVerifier();
       throw error;
     }
+  }
+
+  async checkCoachAccess(user: AuthUser): Promise<CoachAccessProfile | null> {
+    if (!user.phoneNumber) return null;
+
+    const snapshot = await this.firestore
+      .collection("approvedCoaches")
+      .doc(user.phoneNumber)
+      .get({ source: "server" });
+
+    if (!snapshot.exists) return null;
+    const data = snapshot.data() ?? {};
+    if (data.active !== true) return null;
+
+    const displayName =
+      typeof data.displayName === "string" && data.displayName.trim()
+        ? data.displayName.trim()
+        : "Coach";
+
+    return { displayName };
   }
 
   async signOut(): Promise<void> {
@@ -125,5 +167,5 @@ export const createFirebaseAuthClient = (): AuthClient => {
 
   const auth = firebase.auth();
   auth.languageCode = "en";
-  return new FirebaseAuthClient(firebase, auth);
+  return new FirebaseAuthClient(firebase, auth, firebase.firestore());
 };
