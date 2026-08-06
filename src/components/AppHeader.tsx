@@ -37,11 +37,21 @@ export const AppHeader = ({
     />
     <div className="header-actions">
       <SaveStatus status={status} onRetry={onRetry} />
-      <button className="header-tool" type="button" onClick={onOpenSnapshots}>Snapshots</button>
-      <button className="header-tool" type="button" onClick={onOpenPrint}>Print</button>
+      <button
+        className="header-tool"
+        type="button"
+        onClick={onOpenSnapshots}
+      >
+        Snapshots
+      </button>
+      <button className="header-tool" type="button" onClick={onOpenPrint}>
+        Print
+      </button>
       <CoachSessionMenu
         displayName={coachDisplayName}
         phoneNumber={signedInPhoneNumber}
+        onOpenSnapshots={onOpenSnapshots}
+        onOpenPrint={onOpenPrint}
         onSignOut={onSignOut}
       />
     </div>
