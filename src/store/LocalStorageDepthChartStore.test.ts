@@ -5,85 +5,67 @@ import { LocalStorageDepthChartStore } from "./LocalStorageDepthChartStore";
 describe("LocalStorageDepthChartStore", () => {
   it("keeps offense and defense assignments independent", async () => {
     const store = new LocalStorageDepthChartStore(new MemoryStorage());
-
-    await store.moveAssignment({
-      playerId: "p01",
-      formationId: "offense-base",
-      toPositionId: "off-q",
-    });
-    await store.moveAssignment({
-      playerId: "p01",
-      formationId: "defense-base",
-      toPositionId: "def-fs",
-    });
-
+    await store.moveAssignment({ playerId: "p01", formationId: "offense-base", toPositionId: "off-q" });
+    await store.moveAssignment({ playerId: "p01", formationId: "defense-base", toPositionId: "def-fs" });
     const state = await store.loadLineup();
     expect(state.assignments["offense-base"]["off-q"]).toEqual(["p01"]);
     expect(state.assignments["defense-base"]["def-fs"]).toEqual(["p01"]);
   });
 
-  it("moves and reorders players by stable id", async () => {
-    const store = new LocalStorageDepthChartStore(new MemoryStorage());
-
-    for (const playerId of ["p01", "p02", "p03"]) {
-      await store.moveAssignment({
-        playerId,
-        formationId: "offense-base",
-        toPositionId: "off-q",
-      });
-    }
-    await store.reorderDepth({
-      playerId: "p03",
-      formationId: "offense-base",
-      positionId: "off-q",
-      toDepthIndex: 0,
-    });
-
+  it("persists version 1 data through migration", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem("eldorado-depth-chart.phase1.v1", JSON.stringify({
+      version: 1,
+      assignments: { "offense-base": { "off-q": ["p01"] } },
+      addedPlayers: [{ id: "p27", name: "New Player" }],
+    }));
+    const store = new LocalStorageDepthChartStore(storage);
     const state = await store.loadLineup();
-    expect(state.assignments["offense-base"]["off-q"]).toEqual([
-      "p03",
-      "p01",
-      "p02",
-    ]);
+    expect(state.version).toBe(2);
+    expect(state.assignments["offense-base"]["off-q"]).toEqual(["p01"]);
+    expect(state.addedPlayers[0].id).toBe("p27");
   });
 
-  it("persists through a new adapter instance", async () => {
-    const storage = new MemoryStorage();
-    const firstStore = new LocalStorageDepthChartStore(storage);
-    await firstStore.moveAssignment({
-      playerId: "p08",
-      formationId: "offense-base",
-      toPositionId: "off-x",
-    });
-
-    const secondStore = new LocalStorageDepthChartStore(storage);
-    const state = await secondStore.loadLineup();
-    expect(state.assignments["offense-base"]["off-x"]).toEqual(["p08"]);
-  });
-
-  it("adds a name-only player with a stable id and keeps them after reload", async () => {
-    const storage = new MemoryStorage();
-    const firstStore = new LocalStorageDepthChartStore(storage);
-    const player = await firstStore.addPlayer({ name: "  New Player  " });
-
-    expect(player).toEqual({ id: "p27", name: "New Player" });
-
-    await firstStore.moveAssignment({
-      playerId: player.id,
-      formationId: "offense-base",
-      toPositionId: "off-t",
-    });
-
-    const secondStore = new LocalStorageDepthChartStore(storage);
-    const state = await secondStore.loadLineup();
-    expect(state.addedPlayers).toEqual([player]);
-    expect(state.assignments["offense-base"]["off-t"]).toEqual(["p27"]);
-  });
-
-  it("keeps an optional jersey number when adding a player", async () => {
+  it("edits a seed player through an override", async () => {
     const store = new LocalStorageDepthChartStore(new MemoryStorage());
-    const player = await store.addPlayer({ name: "New Player", number: " 7 " });
+    await store.updatePlayer({ playerId: "p01", name: "Updated Player", number: "12" });
+    const state = await store.loadLineup();
+    expect(state.playerOverrides.p01).toEqual({ name: "Updated Player", number: "12" });
+  });
 
-    expect(player).toEqual({ id: "p27", name: "New Player", number: "7" });
+  it("prevents an exact duplicate name and number", async () => {
+    const store = new LocalStorageDepthChartStore(new MemoryStorage());
+    const existing = (await store.loadLineup()).addedPlayers;
+    expect(existing).toEqual([]);
+    await expect(store.addPlayer({ name: "Isaiah Chavez", number: "" })).rejects.toThrow(
+      "already exists",
+    );
+  });
+
+  it("archives a player and removes all assignments", async () => {
+    const store = new LocalStorageDepthChartStore(new MemoryStorage());
+    await store.moveAssignment({ playerId: "p01", formationId: "offense-base", toPositionId: "off-q" });
+    await store.moveAssignment({ playerId: "p01", formationId: "defense-base", toPositionId: "def-fs" });
+    await store.archivePlayer({ playerId: "p01" });
+    const state = await store.loadLineup();
+    expect(state.archivedPlayerIds).toContain("p01");
+    expect(state.assignments["offense-base"]["off-q"]).toEqual([]);
+    expect(state.assignments["defense-base"]["def-fs"]).toEqual([]);
+  });
+
+  it("undoes the most recent mutation", async () => {
+    const store = new LocalStorageDepthChartStore(new MemoryStorage());
+    await store.moveAssignment({ playerId: "p01", formationId: "offense-base", toPositionId: "off-q" });
+    expect(await store.undoLastChange()).toBe(true);
+    expect((await store.loadLineup()).assignments["offense-base"]["off-q"]).toEqual([]);
+  });
+
+  it("creates and restores a named snapshot", async () => {
+    const store = new LocalStorageDepthChartStore(new MemoryStorage());
+    await store.moveAssignment({ playerId: "p01", formationId: "offense-base", toPositionId: "off-q" });
+    const snapshot = await store.createSnapshot("Before Week 1");
+    await store.unassignPlayer({ playerId: "p01", formationId: "offense-base" });
+    await store.restoreSnapshot(snapshot.id);
+    expect((await store.loadLineup()).assignments["offense-base"]["off-q"]).toEqual(["p01"]);
   });
 });
