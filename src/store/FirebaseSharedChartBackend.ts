@@ -53,25 +53,30 @@ export class FirebaseSharedChartBackend implements SharedChartBackend {
   }
 
   async listSnapshots(): Promise<DepthChartSnapshot[]> {
-    const snapshot = await this.snapshotsRef.get();
-    return snapshot.docs
-      .map((document) => {
-        const data = document.data();
-        if (!data || typeof data !== "object") return null;
-        const candidate = data as Partial<DepthChartSnapshot>;
-        if (typeof candidate.name !== "string" || typeof candidate.createdAt !== "string") {
-          return null;
-        }
-        return {
-          id: document.id,
-          name: candidate.name,
-          createdAt: candidate.createdAt,
-          createdBy: typeof candidate.createdBy === "string" ? candidate.createdBy : null,
-          state: normalizeState(candidate.state),
-        } satisfies DepthChartSnapshot;
-      })
-      .filter((value): value is DepthChartSnapshot => value !== null)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const querySnapshot = await this.snapshotsRef.get();
+    const snapshots: DepthChartSnapshot[] = [];
+
+    for (const document of querySnapshot.docs) {
+      const data = document.data();
+      if (!data || typeof data !== "object") continue;
+      const candidate = data as Partial<DepthChartSnapshot>;
+      if (
+        typeof candidate.name !== "string" ||
+        typeof candidate.createdAt !== "string"
+      ) {
+        continue;
+      }
+      snapshots.push({
+        id: document.id,
+        name: candidate.name,
+        createdAt: candidate.createdAt,
+        createdBy:
+          typeof candidate.createdBy === "string" ? candidate.createdBy : null,
+        state: normalizeState(candidate.state),
+      });
+    }
+
+    return snapshots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   async writeSnapshot(snapshot: DepthChartSnapshot): Promise<void> {
