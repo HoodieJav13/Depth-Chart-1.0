@@ -16,9 +16,10 @@ try {
   root.render(
     <StrictMode>
       <AuthGate authClient={authClient}>
-        {({ phoneNumber, signOut }) => (
+        {({ displayName, phoneNumber, signOut }) => (
           <App
             store={store}
+            coachDisplayName={displayName}
             signedInPhoneNumber={phoneNumber}
             onSignOut={signOut}
           />
@@ -33,13 +34,12 @@ try {
       <main className="auth-shell">
         <section className="auth-card" role="alert">
           <div className="auth-brand">
-            <span>E</span>
-            <div>
-              <p>Eldorado Football</p>
-              <h1>Setup required</h1>
-            </div>
+            <p>Eldorado Football</p>
+            <h1>Setup required</h1>
           </div>
-          <p className="auth-error">{message}</p>
+          <div className="auth-form">
+            <p className="auth-error">{message}</p>
+          </div>
         </section>
       </main>
     </StrictMode>,
