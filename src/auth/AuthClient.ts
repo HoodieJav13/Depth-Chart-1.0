@@ -3,6 +3,10 @@ export interface AuthUser {
   phoneNumber: string | null;
 }
 
+export interface CoachAccessProfile {
+  displayName: string;
+}
+
 export interface PhoneCodeSession {
   confirm(code: string): Promise<void>;
 }
@@ -14,7 +18,8 @@ export interface AuthClient {
   subscribe(listener: AuthStateListener, onError?: AuthErrorListener): () => void;
   requestCode(
     phoneNumber: string,
-    recaptchaContainerId: string,
+    recaptchaButtonId: string,
   ): Promise<PhoneCodeSession>;
+  checkCoachAccess(user: AuthUser): Promise<CoachAccessProfile | null>;
   signOut(): Promise<void>;
 }
