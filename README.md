@@ -18,7 +18,7 @@ npm test
 npm run build
 ```
 
-## Phase 1 architecture
+## Phase 1 depth chart
 
 - `src/config/roster.json` and `src/config/formations.json` are the supplied seed data.
 - All player placement uses stable player IDs.
@@ -27,19 +27,12 @@ npm run build
 - Coaches can add name-only players or include an optional jersey number; added players persist locally and start unassigned.
 - Offense and defense assignments are independent even though they share one roster.
 
-Phase 1 intentionally excludes cloud sync, authentication, special teams, full roster/formation editors, saved snapshots, printing, and player detail pages.
+## Phase 2 coach authentication
 
+The app requires Firebase phone authentication before showing the depth chart. Firebase uses invisible reCAPTCHA for abuse prevention, and verified users must also have an active Cloud Firestore record at `approvedCoaches/{E.164 phone number}`.
 
-## Phase 2 authentication
+The app never trusts a browser-side phone-number list. `firestore.rules` prevents clients from creating or editing coach approvals and reserves future `depthCharts` cloud data for active approved coaches.
 
-The app now requires Firebase phone authentication before showing the depth chart. The initial approved coach number is configured in `src/auth/approvedCoaches.ts`.
+Follow [`docs/firebase-access-setup.md`](docs/firebase-access-setup.md) for the required Firebase console document and rules deployment.
 
-Firebase console prerequisites:
-
-1. Enable **Phone** under Authentication > Sign-in method.
-2. Allow SMS messages to the United States under Authentication > Settings > SMS region policy.
-3. Add `eldorado-depth-chart.vercel.app` under Authentication > Settings > Authorized domains.
-4. Use a fictional `555` number and fixed six-digit code for development testing rather than registering a real phone number as fictional.
-5. Optionally set `VITE_FIREBASE_APP_ID` in Vercel from the Firebase web config object.
-
-This phase protects the app but intentionally continues using browser local storage. Shared Firestore syncing is the next phase.
+This phase intentionally continues using browser local storage for lineup data. Shared Firestore depth-chart syncing is the next phase.
