@@ -6,6 +6,7 @@ import { createFirebaseAuthClient } from "./auth/firebaseCompat";
 import "./styles.css";
 import "./auth.css";
 import "./workflow.css";
+import "./mobile-polish.css";
 import "./print.css";
 
 const root = createRoot(document.getElementById("root")!);
@@ -16,19 +17,29 @@ try {
     <StrictMode>
       <AuthGate authClient={authClient}>
         {({ displayName, phoneNumber, signOut }) => (
-          <AuthenticatedApp displayName={displayName} phoneNumber={phoneNumber} onSignOut={signOut} />
+          <AuthenticatedApp
+            displayName={displayName}
+            phoneNumber={phoneNumber}
+            onSignOut={signOut}
+          />
         )}
       </AuthGate>
     </StrictMode>,
   );
 } catch (error) {
-  const message = error instanceof Error ? error.message : "Firebase failed to start.";
+  const message =
+    error instanceof Error ? error.message : "Firebase failed to start.";
   root.render(
     <StrictMode>
       <main className="auth-shell">
         <section className="auth-card" role="alert">
-          <div className="auth-brand"><p>Eldorado Football</p><h1>Setup required</h1></div>
-          <div className="auth-form"><p className="auth-error">{message}</p></div>
+          <div className="auth-brand">
+            <p>Eldorado Football</p>
+            <h1>Setup required</h1>
+          </div>
+          <div className="auth-form">
+            <p className="auth-error">{message}</p>
+          </div>
         </section>
       </main>
     </StrictMode>,
