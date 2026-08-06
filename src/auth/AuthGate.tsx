@@ -1,9 +1,18 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import type { AuthClient, AuthUser, PhoneCodeSession } from "./AuthClient";
-import { isApprovedCoach } from "./approvedCoaches";
-import { normalizeUsPhoneNumber } from "./phoneNumber";
+import type {
+  AuthClient,
+  AuthUser,
+  CoachAccessProfile,
+  PhoneCodeSession,
+} from "./AuthClient";
+import {
+  formatE164PhoneNumber,
+  formatUsPhoneInput,
+  normalizeUsPhoneNumber,
+} from "./phoneNumber";
 
 interface AuthenticatedCoachSession {
+  displayName: string;
   phoneNumber: string;
   signOut: () => Promise<void>;
 }
@@ -13,15 +22,19 @@ interface AuthGateProps {
   children: (session: AuthenticatedCoachSession) => ReactNode;
 }
 
-type GateStatus = "loading" | "signedOut" | "codeSent" | "signedIn" | "denied";
+type GateStatus =
+  | "loading"
+  | "checkingAccess"
+  | "signedOut"
+  | "codeSent"
+  | "signedIn"
+  | "denied";
+
+const errorCodeFor = (error: unknown): string =>
+  typeof error === "object" && error && "code" in error ? String(error.code) : "";
 
 const errorMessageFor = (error: unknown): string => {
-  const code =
-    typeof error === "object" && error && "code" in error
-      ? String(error.code)
-      : "";
-
-  switch (code) {
+  switch (errorCodeFor(error)) {
     case "auth/invalid-phone-number":
     case "auth/missing-phone-number":
       return "Enter a valid 10-digit US phone number.";
@@ -37,7 +50,13 @@ const errorMessageFor = (error: unknown): string => {
       return "This site is not authorized in Firebase yet.";
     case "auth/captcha-check-failed":
     case "auth/missing-app-credential":
-      return "Complete the reCAPTCHA and try again.";
+      return "Firebase could not verify this request. Try again.";
+    case "permission-denied":
+    case "firestore/permission-denied":
+      return "Coach access could not be verified. Check the Firestore access setup.";
+    case "unavailable":
+    case "firestore/unavailable":
+      return "Coach access is temporarily unavailable. Check your connection and retry.";
     default:
       return error instanceof Error
         ? error.message
@@ -48,6 +67,7 @@ const errorMessageFor = (error: unknown): string => {
 export const AuthGate = ({ authClient, children }: AuthGateProps) => {
   const [status, setStatus] = useState<GateStatus>("loading");
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<CoachAccessProfile | null>(null);
   const [phoneInput, setPhoneInput] = useState("");
   const [normalizedPhone, setNormalizedPhone] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
@@ -56,33 +76,65 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
+    let active = true;
     let denied = false;
-    return authClient.subscribe(
+    let accessRequest = 0;
+
+    const unsubscribe = authClient.subscribe(
       (nextUser) => {
+        const requestId = ++accessRequest;
+
         if (!nextUser) {
+          if (!active) return;
           setUser(null);
+          setProfile(null);
           setStatus(denied ? "denied" : "signedOut");
           return;
         }
 
-        if (!isApprovedCoach(nextUser.phoneNumber)) {
-          denied = true;
-          setUser(null);
-          setStatus("denied");
-          void authClient.signOut();
-          return;
-        }
-
-        denied = false;
-        setUser(nextUser);
-        setStatus("signedIn");
+        setStatus("checkingAccess");
         setErrorMessage(null);
+
+        void authClient
+          .checkCoachAccess(nextUser)
+          .then((nextProfile) => {
+            if (!active || requestId !== accessRequest) return;
+
+            if (!nextProfile) {
+              denied = true;
+              setUser(null);
+              setProfile(null);
+              setStatus("denied");
+              void authClient.signOut();
+              return;
+            }
+
+            denied = false;
+            setUser(nextUser);
+            setProfile(nextProfile);
+            setStatus("signedIn");
+          })
+          .catch((error) => {
+            if (!active || requestId !== accessRequest) return;
+            denied = false;
+            setUser(null);
+            setProfile(null);
+            setStatus("signedOut");
+            setErrorMessage(errorMessageFor(error));
+            void authClient.signOut();
+          });
       },
       (error) => {
+        if (!active) return;
         setStatus("signedOut");
         setErrorMessage(errorMessageFor(error));
       },
     );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [authClient]);
 
   const requestCode = async (event: FormEvent<HTMLFormElement>) => {
@@ -96,10 +148,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     setIsBusy(true);
     setErrorMessage(null);
     try {
-      const session = await authClient.requestCode(
-        phoneNumber,
-        "recaptcha-container",
-      );
+      const session = await authClient.requestCode(phoneNumber, "send-code-button");
       setNormalizedPhone(phoneNumber);
       setCodeSession(session);
       setVerificationCode("");
@@ -134,17 +183,20 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     setErrorMessage(null);
   };
 
-  if (status === "signedIn" && user?.phoneNumber) {
+  if (status === "signedIn" && user?.phoneNumber && profile) {
     return children({
+      displayName: profile.displayName,
       phoneNumber: user.phoneNumber,
       signOut: () => authClient.signOut(),
     });
   }
 
-  if (status === "loading") {
+  if (status === "loading" || status === "checkingAccess") {
     return (
       <main className="auth-shell">
-        <div className="auth-loading">Checking coach access…</div>
+        <div className="auth-loading">
+          {status === "checkingAccess" ? "Verifying coach access…" : "Checking sign-in…"}
+        </div>
       </main>
     );
   }
@@ -153,11 +205,8 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand">
-          <span>E</span>
-          <div>
-            <p>Eldorado Football</p>
-            <h1 id="auth-title">Coach Access</h1>
-          </div>
+          <p>Eldorado Football</p>
+          <h1 id="auth-title">Coach Access</h1>
         </div>
 
         {status === "denied" ? (
@@ -171,11 +220,16 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
         ) : status === "codeSent" ? (
           <form className="auth-form" onSubmit={(event) => void confirmCode(event)}>
             <p className="auth-intro">
-              Enter the six-digit code for <strong>{normalizedPhone}</strong>.
+              Enter the six-digit code sent to{" "}
+              <strong>
+                {normalizedPhone ? formatE164PhoneNumber(normalizedPhone) : "your phone"}
+              </strong>
+              .
             </p>
             <label htmlFor="verification-code">Verification code</label>
             <input
               id="verification-code"
+              className="verification-code-input"
               value={verificationCode}
               onChange={(event) =>
                 setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
@@ -195,7 +249,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
               type="submit"
               disabled={verificationCode.length !== 6 || isBusy}
             >
-              {isBusy ? "Verifying…" : "Verify and continue"}
+              {isBusy ? "Verifying…" : "Verify code"}
             </button>
             <button className="auth-secondary" type="button" onClick={resetSignIn}>
               Use a different number
@@ -204,30 +258,33 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
         ) : (
           <form className="auth-form" onSubmit={(event) => void requestCode(event)}>
             <p className="auth-intro">
-              Sign in with an approved coach phone number to open the depth chart.
+              Enter an approved coach phone number to continue.
             </p>
             <label htmlFor="phone-number">Phone number</label>
             <input
               id="phone-number"
               value={phoneInput}
-              onChange={(event) => setPhoneInput(event.target.value)}
+              onChange={(event) => setPhoneInput(formatUsPhoneInput(event.target.value))}
               inputMode="tel"
               autoComplete="tel"
               placeholder="(505) 555-0123"
               autoFocus
             />
-            <div id="recaptcha-container" className="recaptcha-container" />
             {errorMessage ? (
               <p className="auth-error" role="alert">
                 {errorMessage}
               </p>
             ) : null}
-            <button className="auth-primary" type="submit" disabled={isBusy}>
-              {isBusy ? "Sending…" : "Send code"}
+            <button
+              id="send-code-button"
+              className="auth-primary"
+              type="submit"
+              disabled={isBusy}
+            >
+              {isBusy ? "Sending…" : "Continue"}
             </button>
             <p className="auth-disclaimer">
-              Standard SMS rates may apply. Phone numbers are processed by Firebase for
-              verification and abuse prevention.
+              We’ll text a verification code. Standard SMS rates may apply.
             </p>
           </form>
         )}
