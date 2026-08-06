@@ -1,13 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { AuthenticatedApp } from "./AuthenticatedApp";
 import { AuthGate } from "./auth/AuthGate";
 import { createFirebaseAuthClient } from "./auth/firebaseCompat";
-import { LocalStorageDepthChartStore } from "./store/LocalStorageDepthChartStore";
 import "./styles.css";
 import "./auth.css";
-
-const store = new LocalStorageDepthChartStore();
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -17,10 +14,9 @@ try {
     <StrictMode>
       <AuthGate authClient={authClient}>
         {({ displayName, phoneNumber, signOut }) => (
-          <App
-            store={store}
-            coachDisplayName={displayName}
-            signedInPhoneNumber={phoneNumber}
+          <AuthenticatedApp
+            displayName={displayName}
+            phoneNumber={phoneNumber}
             onSignOut={signOut}
           />
         )}

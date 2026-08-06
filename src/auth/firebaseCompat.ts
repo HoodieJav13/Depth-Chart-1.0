@@ -44,21 +44,42 @@ interface FirebaseCompatAuthFactory {
   ) => FirebaseCompatRecaptchaVerifier;
 }
 
-interface FirebaseCompatDocumentSnapshot {
+export interface FirebaseCompatDocumentSnapshot {
+  id: string;
   exists: boolean;
   data(): Record<string, unknown> | undefined;
 }
 
-interface FirebaseCompatDocumentReference {
+export interface FirebaseCompatQuerySnapshot {
+  docs: FirebaseCompatDocumentSnapshot[];
+}
+
+export interface FirebaseCompatDocumentReference {
   get(options?: { source?: "server" | "cache" | "default" }): Promise<FirebaseCompatDocumentSnapshot>;
-}
-
-interface FirebaseCompatCollectionReference {
-  doc(documentId: string): FirebaseCompatDocumentReference;
-}
-
-interface FirebaseCompatFirestore {
+  set(value: unknown): Promise<void>;
+  delete(): Promise<void>;
   collection(path: string): FirebaseCompatCollectionReference;
+  onSnapshot(
+    listener: (snapshot: FirebaseCompatDocumentSnapshot) => void,
+    onError?: (error: Error) => void,
+  ): () => void;
+}
+
+export interface FirebaseCompatCollectionReference {
+  doc(documentId: string): FirebaseCompatDocumentReference;
+  get(): Promise<FirebaseCompatQuerySnapshot>;
+}
+
+export interface FirebaseCompatTransaction {
+  get(reference: FirebaseCompatDocumentReference): Promise<FirebaseCompatDocumentSnapshot>;
+  set(reference: FirebaseCompatDocumentReference, value: unknown): void;
+}
+
+export interface FirebaseCompatFirestore {
+  collection(path: string): FirebaseCompatCollectionReference;
+  runTransaction<T>(
+    updateFunction: (transaction: FirebaseCompatTransaction) => Promise<T>,
+  ): Promise<T>;
 }
 
 interface FirebaseCompatNamespace {
@@ -107,12 +128,8 @@ class FirebaseAuthClient implements AuthClient {
       recaptchaButtonId,
       { size: "invisible" },
     );
-
     try {
-      const confirmation = await this.auth.signInWithPhoneNumber(
-        phoneNumber,
-        this.verifier,
-      );
+      const confirmation = await this.auth.signInWithPhoneNumber(phoneNumber, this.verifier);
       return {
         confirm: async (code: string) => {
           await confirmation.confirm(code);
@@ -126,21 +143,17 @@ class FirebaseAuthClient implements AuthClient {
 
   async checkCoachAccess(user: AuthUser): Promise<CoachAccessProfile | null> {
     if (!user.phoneNumber) return null;
-
     const snapshot = await this.firestore
       .collection("approvedCoaches")
       .doc(user.phoneNumber)
       .get({ source: "server" });
-
     if (!snapshot.exists) return null;
     const data = snapshot.data() ?? {};
     if (data.active !== true) return null;
-
     const displayName =
       typeof data.displayName === "string" && data.displayName.trim()
         ? data.displayName.trim()
         : "Coach";
-
     return { displayName };
   }
 
@@ -155,17 +168,19 @@ class FirebaseAuthClient implements AuthClient {
   }
 }
 
-export const createFirebaseAuthClient = (): AuthClient => {
+const getFirebaseNamespace = (): FirebaseCompatNamespace => {
   const firebase = window.firebase;
-  if (!firebase) {
-    throw new Error("Firebase failed to load. Check your connection and reload.");
-  }
+  if (!firebase) throw new Error("Firebase failed to load. Check your connection and reload.");
+  if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+  return firebase;
+};
 
-  if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig);
-  }
-
+export const createFirebaseAuthClient = (): AuthClient => {
+  const firebase = getFirebaseNamespace();
   const auth = firebase.auth();
   auth.languageCode = "en";
   return new FirebaseAuthClient(firebase, auth, firebase.firestore());
 };
+
+export const getFirebaseFirestore = (): FirebaseCompatFirestore =>
+  getFirebaseNamespace().firestore();

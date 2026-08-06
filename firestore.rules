@@ -23,7 +23,11 @@ service cloud.firestore {
       allow list, create, update, delete: if false;
     }
 
-    match /depthCharts/{document=**} {
+    match /teams/{teamId}/depthChart/{documentId} {
+      allow read, write: if isApprovedCoach();
+    }
+
+    match /teams/{teamId}/snapshots/{snapshotId} {
       allow read, write: if isApprovedCoach();
     }
 
