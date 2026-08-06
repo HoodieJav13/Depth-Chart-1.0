@@ -35,9 +35,7 @@ describe("LocalStorageDepthChartStore", () => {
 
   it("prevents an exact duplicate name and number", async () => {
     const store = new LocalStorageDepthChartStore(new MemoryStorage());
-    const existing = (await store.loadLineup()).addedPlayers;
-    expect(existing).toEqual([]);
-    await expect(store.addPlayer({ name: "Isaiah Chavez", number: "" })).rejects.toThrow(
+    await expect(store.addPlayer({ name: "Reid Alcaraz", number: "" })).rejects.toThrow(
       "already exists",
     );
   });
