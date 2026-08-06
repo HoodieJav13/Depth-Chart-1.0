@@ -1,0 +1,42 @@
+@media (max-width: 760px) {
+  .mobile-position-heading {
+    min-height: 54px;
+  }
+
+  .mobile-expand-button {
+    width: 48px;
+    min-height: 48px;
+  }
+
+  .mobile-position-target {
+    min-height: 52px;
+    padding: 9px 12px;
+  }
+
+  .mobile-player-stack {
+    gap: 7px;
+  }
+
+  .mobile-player-stack .player-card,
+  .mobile-empty-target {
+    min-height: 48px;
+  }
+
+  .mobile-position-row.ready-to-place .mobile-position-target,
+  .mobile-position-row.ready-to-place .mobile-empty-target {
+    border-color: var(--orange);
+    background: var(--orange-soft);
+  }
+
+  .mobile-position-row.ready-to-place .mobile-position-target strong {
+    color: #ffc79f;
+  }
+
+  .mobile-unassigned-list .roster-player-row {
+    grid-template-columns: minmax(0, 1fr) 42px;
+  }
+
+  .mobile-unassigned-list .player-actions-menu summary {
+    min-height: 44px;
+  }
+}
