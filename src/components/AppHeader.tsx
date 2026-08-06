@@ -1,23 +1,21 @@
 import type { FormationConfig } from "../domain/types";
+import { CoachSessionMenu } from "./CoachSessionMenu";
 import { UnitTabs } from "./UnitTabs";
 
 interface AppHeaderProps {
   formations: FormationConfig[];
   activeFormationId: string;
   onFormationChange: (formationId: string) => void;
+  coachDisplayName: string;
   signedInPhoneNumber: string;
   onSignOut: () => Promise<void>;
 }
-
-const formatPhoneNumber = (phoneNumber: string): string => {
-  const match = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(phoneNumber);
-  return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phoneNumber;
-};
 
 export const AppHeader = ({
   formations,
   activeFormationId,
   onFormationChange,
+  coachDisplayName,
   signedInPhoneNumber,
   onSignOut,
 }: AppHeaderProps) => (
@@ -28,11 +26,10 @@ export const AppHeader = ({
       activeFormationId={activeFormationId}
       onChange={onFormationChange}
     />
-    <div className="coach-session">
-      <span>{formatPhoneNumber(signedInPhoneNumber)}</span>
-      <button type="button" onClick={() => void onSignOut()}>
-        Sign out
-      </button>
-    </div>
+    <CoachSessionMenu
+      displayName={coachDisplayName}
+      phoneNumber={signedInPhoneNumber}
+      onSignOut={onSignOut}
+    />
   </header>
 );
