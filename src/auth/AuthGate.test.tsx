@@ -4,6 +4,7 @@ import type {
   AuthClient,
   AuthStateListener,
   AuthUser,
+  CoachAccessProfile,
   PhoneCodeSession,
 } from "./AuthClient";
 import { AuthGate } from "./AuthGate";
@@ -15,9 +16,17 @@ class FakeAuthClient implements AuthClient {
       this.emit({ uid: "coach-1", phoneNumber: "+15057307634" });
     },
   }));
+  readonly checkCoachAccess = vi.fn(
+    async (): Promise<CoachAccessProfile | null> => this.accessProfile,
+  );
   readonly signOut = vi.fn(async () => this.emit(null));
 
-  constructor(private readonly initialUser: AuthUser | null = null) {}
+  constructor(
+    private readonly initialUser: AuthUser | null = null,
+    private readonly accessProfile: CoachAccessProfile | null = {
+      displayName: "Coach Chavez",
+    },
+  ) {}
 
   subscribe(listener: AuthStateListener): () => void {
     this.listener = listener;
@@ -33,53 +42,65 @@ class FakeAuthClient implements AuthClient {
 }
 
 describe("AuthGate", () => {
-  it("requests a code and admits the approved coach after confirmation", async () => {
+  it("formats the phone, requests an invisible challenge, and verifies server access", async () => {
     const authClient = new FakeAuthClient();
     render(
       <AuthGate authClient={authClient}>
-        {({ phoneNumber }) => <div>Signed in as {phoneNumber}</div>}
+        {({ displayName, phoneNumber }) => (
+          <div>
+            Signed in as {displayName} {phoneNumber}
+          </div>
+        )}
       </AuthGate>,
     );
 
     fireEvent.change(screen.getByLabelText("Phone number"), {
-      target: { value: "(505) 730-7634" },
+      target: { value: "5057307634" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Send code" }));
+    expect(screen.getByLabelText("Phone number")).toHaveValue("(505) 730-7634");
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     await screen.findByLabelText("Verification code");
+    expect(screen.getByText(/\(505\) 730-7634/)).toBeInTheDocument();
     expect(authClient.requestCode).toHaveBeenCalledWith(
       "+15057307634",
-      "recaptcha-container",
+      "send-code-button",
     );
 
     fireEvent.change(screen.getByLabelText("Verification code"), {
       target: { value: "123456" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Verify and continue" }));
+    fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
 
-    expect(await screen.findByText("Signed in as +15057307634")).toBeInTheDocument();
-  });
-
-  it("restores an approved existing session", async () => {
-    const authClient = new FakeAuthClient({
+    expect(
+      await screen.findByText("Signed in as Coach Chavez +15057307634"),
+    ).toBeInTheDocument();
+    expect(authClient.checkCoachAccess).toHaveBeenCalledWith({
       uid: "coach-1",
       phoneNumber: "+15057307634",
     });
+  });
+
+  it("restores a session only after server access is verified", async () => {
+    const user = { uid: "coach-1", phoneNumber: "+15057307634" };
+    const authClient = new FakeAuthClient(user, { displayName: "Coach Chavez" });
 
     render(
       <AuthGate authClient={authClient}>
-        {({ phoneNumber }) => <div>Welcome {phoneNumber}</div>}
+        {({ displayName }) => <div>Welcome {displayName}</div>}
       </AuthGate>,
     );
 
-    expect(await screen.findByText("Welcome +15057307634")).toBeInTheDocument();
+    expect(await screen.findByText("Welcome Coach Chavez")).toBeInTheDocument();
+    expect(authClient.checkCoachAccess).toHaveBeenCalledWith(user);
   });
 
-  it("signs out a verified number that is not approved", async () => {
-    const authClient = new FakeAuthClient({
-      uid: "other",
-      phoneNumber: "+15055550134",
-    });
+  it("signs out a verified number without an active Firestore coach record", async () => {
+    const authClient = new FakeAuthClient(
+      { uid: "other", phoneNumber: "+15055550134" },
+      null,
+    );
 
     render(
       <AuthGate authClient={authClient}>
