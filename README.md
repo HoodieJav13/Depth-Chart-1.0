@@ -18,21 +18,52 @@ npm test
 npm run build
 ```
 
-## Phase 1 depth chart
+## Depth-chart architecture
 
-- `src/config/roster.json` and `src/config/formations.json` are the supplied seed data.
-- All player placement uses stable player IDs.
-- Components communicate through `DepthChartStore`.
-- `LocalStorageDepthChartStore` is the only module that knows about browser storage.
-- Coaches can add name-only players or include an optional jersey number; added players persist locally and start unassigned.
-- Offense and defense assignments are independent even though they share one roster.
+- `src/config/roster.json` and `src/config/formations.json` provide the seed roster and formation layout.
+- All assignments use stable player IDs.
+- `DepthChartStore` isolates React from persistence details.
+- `LocalStorageDepthChartStore` upgrades the original browser state and remains the migration/fallback source.
+- `FirestoreDepthChartStore` provides the authenticated shared chart, realtime listeners, revision-checked writes, save status, retry, one-level undo, and named snapshots.
+- Offense and defense assignments remain independent while sharing one roster.
+- Seed-player edits are stored as overrides; added and archived players remain in versioned shared state.
 
-## Phase 2 coach authentication
+## Coach authentication and authorization
 
-The app requires Firebase phone authentication before showing the depth chart. Firebase uses invisible reCAPTCHA for abuse prevention, and verified users must also have an active Cloud Firestore record at `approvedCoaches/{E.164 phone number}`.
+The app uses Firebase phone authentication with invisible reCAPTCHA. A verified user must also have an active Cloud Firestore record at:
 
-The app never trusts a browser-side phone-number list. `firestore.rules` prevents clients from creating or editing coach approvals and reserves future `depthCharts` cloud data for active approved coaches.
+```text
+approvedCoaches/{E.164 phone number}
+```
 
-Follow [`docs/firebase-access-setup.md`](docs/firebase-access-setup.md) for the required Firebase console document and rules deployment.
+The browser does not contain an approval allowlist. `firestore.rules` prevents clients from creating or editing coach approval documents and limits team data to active approved coaches.
 
-This phase intentionally continues using browser local storage for lineup data. Shared Firestore depth-chart syncing is the next phase.
+Follow [`docs/firebase-access-setup.md`](docs/firebase-access-setup.md) for Firebase console setup and rules deployment.
+
+## Shared data
+
+The canonical shared chart is stored at:
+
+```text
+teams/eldorado-freshman/depthChart/current
+```
+
+Named snapshots are stored at:
+
+```text
+teams/eldorado-freshman/snapshots/{snapshotId}
+```
+
+On the first approved login, the app creates the shared chart only when it does not already exist. Meaningful data from the original local browser chart is imported once. An existing shared chart is never overwritten automatically.
+
+## Coach workflow
+
+- Realtime shared offense and defense depth charts
+- Saving, saved, offline, failed, and retry feedback
+- One-level Undo that refuses to overwrite a newer change from another coach
+- Search, add, edit, and archive roster players
+- Browser print/PDF output with a white, ink-conscious layout
+- Named snapshots with restore and delete
+- Explicit mobile player-selection guidance, cancel, larger targets, and move confirmation
+
+The project intentionally excludes special teams, player accounts, messaging, attendance, statistics, playbook drawing, and a full administration dashboard.
