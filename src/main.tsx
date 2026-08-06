@@ -1,13 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { AuthenticatedApp } from "./AuthenticatedApp";
 import { AuthGate } from "./auth/AuthGate";
 import { createFirebaseAuthClient } from "./auth/firebaseCompat";
-import { LocalStorageDepthChartStore } from "./store/LocalStorageDepthChartStore";
 import "./styles.css";
 import "./auth.css";
-
-const store = new LocalStorageDepthChartStore();
+import "./workflow.css";
+import "./mobile-polish.css";
+import "./print.css";
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -17,10 +17,9 @@ try {
     <StrictMode>
       <AuthGate authClient={authClient}>
         {({ displayName, phoneNumber, signOut }) => (
-          <App
-            store={store}
-            coachDisplayName={displayName}
-            signedInPhoneNumber={phoneNumber}
+          <AuthenticatedApp
+            displayName={displayName}
+            phoneNumber={phoneNumber}
             onSignOut={signOut}
           />
         )}
@@ -28,7 +27,8 @@ try {
     </StrictMode>,
   );
 } catch (error) {
-  const message = error instanceof Error ? error.message : "Firebase failed to start.";
+  const message =
+    error instanceof Error ? error.message : "Firebase failed to start.";
   root.render(
     <StrictMode>
       <main className="auth-shell">
