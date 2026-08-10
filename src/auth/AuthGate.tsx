@@ -31,6 +31,8 @@ type GateStatus =
   | "signedIn"
   | "denied";
 
+const AUTH_DIAGNOSTIC_BUILD = "A4";
+
 const errorCodeFor = (error: unknown): string =>
   typeof error === "object" && error && "code" in error ? String(error.code) : "";
 
@@ -75,6 +77,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
   const [codeSession, setCodeSession] = useState<PhoneCodeSession | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [verifyPressAcknowledged, setVerifyPressAcknowledged] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -148,6 +151,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
     setIsBusy(true);
     setErrorMessage(null);
+    setVerifyPressAcknowledged(false);
     try {
       const session = await authClient.requestCode(phoneNumber, "send-code-button");
       setNormalizedPhone(phoneNumber);
@@ -209,6 +213,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     setCodeSession(null);
     setVerificationCode("");
     setErrorMessage(null);
+    setVerifyPressAcknowledged(false);
   };
 
   if (status === "signedIn" && user?.phoneNumber && profile) {
@@ -288,12 +293,18 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
               className="auth-primary"
               type="submit"
               disabled={isBusy}
+              onPointerDown={() => setVerifyPressAcknowledged(true)}
             >
-              {isBusy ? "Verifying…" : "Verify code"}
+              {isBusy
+                ? "Verifying…"
+                : verifyPressAcknowledged
+                  ? "Press received…"
+                  : "Verify code"}
             </button>
             <button className="auth-secondary" type="button" onClick={resetSignIn}>
               Use a different number
             </button>
+            <p className="auth-disclaimer">Auth diagnostic build {AUTH_DIAGNOSTIC_BUILD}</p>
           </form>
         ) : (
           <form className="auth-form" onSubmit={(event) => void requestCode(event)}>
