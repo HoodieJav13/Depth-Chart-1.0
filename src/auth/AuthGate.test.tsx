@@ -13,7 +13,9 @@ class FakeAuthClient implements AuthClient {
   private listener: AuthStateListener | null = null;
   readonly requestCode = vi.fn(async (): Promise<PhoneCodeSession> => ({
     confirm: async () => {
-      this.emit({ uid: "coach-1", phoneNumber: "+15057307634" });
+      const user = { uid: "coach-1", phoneNumber: "+15057307634" };
+      this.emit(user);
+      return user;
     },
   }));
   readonly checkCoachAccess = vi.fn(
@@ -43,8 +45,7 @@ class FakeAuthClient implements AuthClient {
 
 class ConfirmWithoutObserverClient implements AuthClient {
   readonly requestCode = vi.fn(async (): Promise<PhoneCodeSession> => ({
-    confirm: async () =>
-      ({ uid: "coach-1", phoneNumber: "+15057307634" }) as unknown as void,
+    confirm: async () => ({ uid: "coach-1", phoneNumber: "+15057307634" }),
   }));
   readonly checkCoachAccess = vi.fn(async (): Promise<CoachAccessProfile | null> => ({
     displayName: "Coach Chavez",
