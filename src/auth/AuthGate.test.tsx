@@ -41,6 +41,22 @@ class FakeAuthClient implements AuthClient {
   }
 }
 
+class ConfirmWithoutObserverClient implements AuthClient {
+  readonly requestCode = vi.fn(async (): Promise<PhoneCodeSession> => ({
+    confirm: async () =>
+      ({ uid: "coach-1", phoneNumber: "+15057307634" }) as unknown as void,
+  }));
+  readonly checkCoachAccess = vi.fn(async (): Promise<CoachAccessProfile | null> => ({
+    displayName: "Coach Chavez",
+  }));
+  readonly signOut = vi.fn(async () => undefined);
+
+  subscribe(listener: AuthStateListener): () => void {
+    listener(null);
+    return () => undefined;
+  }
+}
+
 describe("AuthGate", () => {
   it("formats the phone, requests an invisible challenge, and verifies server access", async () => {
     const authClient = new FakeAuthClient();
@@ -76,6 +92,31 @@ describe("AuthGate", () => {
     expect(
       await screen.findByText("Signed in as Coach Chavez +15057307634"),
     ).toBeInTheDocument();
+    expect(authClient.checkCoachAccess).toHaveBeenCalledWith({
+      uid: "coach-1",
+      phoneNumber: "+15057307634",
+    });
+  });
+
+  it("continues after a successful code confirmation without waiting for an observer event", async () => {
+    const authClient = new ConfirmWithoutObserverClient();
+    render(
+      <AuthGate authClient={authClient}>
+        {({ displayName }) => <div>Welcome {displayName}</div>}
+      </AuthGate>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Phone number"), {
+      target: { value: "5057307634" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByLabelText("Verification code");
+    fireEvent.change(screen.getByLabelText("Verification code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
+
+    expect(await screen.findByText("Welcome Coach Chavez")).toBeInTheDocument();
     expect(authClient.checkCoachAccess).toHaveBeenCalledWith({
       uid: "coach-1",
       phoneNumber: "+15057307634",
