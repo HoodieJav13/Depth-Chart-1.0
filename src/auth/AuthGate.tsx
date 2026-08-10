@@ -167,8 +167,23 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     setIsBusy(true);
     setErrorMessage(null);
     try {
-      await codeSession.confirm(verificationCode);
+      const confirmedUser = await codeSession.confirm(verificationCode);
+      setStatus("checkingAccess");
+      const confirmedProfile = await authClient.checkCoachAccess(confirmedUser);
+
+      if (!confirmedProfile) {
+        setUser(null);
+        setProfile(null);
+        setStatus("denied");
+        void authClient.signOut();
+        return;
+      }
+
+      setUser(confirmedUser);
+      setProfile(confirmedProfile);
+      setStatus("signedIn");
     } catch (error) {
+      setStatus("codeSent");
       setErrorMessage(errorMessageFor(error));
     } finally {
       setIsBusy(false);
