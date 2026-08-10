@@ -8,7 +8,7 @@ export interface CoachAccessProfile {
 }
 
 export interface PhoneCodeSession {
-  confirm(code: string): Promise<void>;
+  confirm(code: string): Promise<AuthUser>;
 }
 
 export type AuthStateListener = (user: AuthUser | null) => void;
