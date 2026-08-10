@@ -58,6 +58,30 @@ class ConfirmWithoutObserverClient implements AuthClient {
   }
 }
 
+class PendingConfirmClient implements AuthClient {
+  private resolveConfirm: ((user: AuthUser) => void) | null = null;
+
+  readonly requestCode = vi.fn(async (): Promise<PhoneCodeSession> => ({
+    confirm: () =>
+      new Promise<AuthUser>((resolve) => {
+        this.resolveConfirm = resolve;
+      }),
+  }));
+  readonly checkCoachAccess = vi.fn(async (): Promise<CoachAccessProfile | null> => ({
+    displayName: "Coach Chavez",
+  }));
+  readonly signOut = vi.fn(async () => undefined);
+
+  subscribe(listener: AuthStateListener): () => void {
+    listener(null);
+    return () => undefined;
+  }
+
+  finishConfirmation(): void {
+    this.resolveConfirm?.({ uid: "coach-1", phoneNumber: "+15057307634" });
+  }
+}
+
 describe("AuthGate", () => {
   it("formats the phone, requests an invisible challenge, and verifies server access", async () => {
     const authClient = new FakeAuthClient();
@@ -122,6 +146,30 @@ describe("AuthGate", () => {
       uid: "coach-1",
       phoneNumber: "+15057307634",
     });
+  });
+
+  it("shows which verification boundary is currently pending", async () => {
+    const authClient = new PendingConfirmClient();
+    render(
+      <AuthGate authClient={authClient}>
+        {({ displayName }) => <div>Welcome {displayName}</div>}
+      </AuthGate>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Phone number"), {
+      target: { value: "5057307634" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByLabelText("Verification code");
+    fireEvent.change(screen.getByLabelText("Verification code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Confirming code with Firebase");
+
+    authClient.finishConfirmation();
+    expect(await screen.findByText("Welcome Coach Chavez")).toBeInTheDocument();
   });
 
   it("restores a session only after server access is verified", async () => {
