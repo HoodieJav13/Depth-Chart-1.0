@@ -132,7 +132,8 @@ class FirebaseAuthClient implements AuthClient {
       const confirmation = await this.auth.signInWithPhoneNumber(phoneNumber, this.verifier);
       return {
         confirm: async (code: string) => {
-          await confirmation.confirm(code);
+          const result = await confirmation.confirm(code);
+          return toAuthUser(result.user);
         },
       };
     } catch (error) {
