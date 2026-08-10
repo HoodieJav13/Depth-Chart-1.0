@@ -127,7 +127,7 @@ describe("AuthGate", () => {
     const authClient = new ConfirmWithoutObserverClient();
     render(
       <AuthGate authClient={authClient}>
-        {({ displayName }) => <div>Welcome {displayName}</div>}
+        {({ displayName }) => <div>Confirmed {displayName}</div>}
       </AuthGate>,
     );
 
@@ -141,7 +141,7 @@ describe("AuthGate", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
 
-    expect(await screen.findByText("Welcome Coach Chavez")).toBeInTheDocument();
+    expect(await screen.findByText("Confirmed Coach Chavez")).toBeInTheDocument();
     expect(authClient.checkCoachAccess).toHaveBeenCalledWith({
       uid: "coach-1",
       phoneNumber: "+15057307634",
@@ -152,7 +152,7 @@ describe("AuthGate", () => {
     const authClient = new PendingConfirmClient();
     render(
       <AuthGate authClient={authClient}>
-        {({ displayName }) => <div>Welcome {displayName}</div>}
+        {({ displayName }) => <div>Pending flow {displayName}</div>}
       </AuthGate>,
     );
 
@@ -169,7 +169,7 @@ describe("AuthGate", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Confirming code with Firebase");
 
     authClient.finishConfirmation();
-    expect(await screen.findByText("Welcome Coach Chavez")).toBeInTheDocument();
+    expect(await screen.findByText("Pending flow Coach Chavez")).toBeInTheDocument();
   });
 
   it("restores a session only after server access is verified", async () => {
@@ -178,11 +178,11 @@ describe("AuthGate", () => {
 
     render(
       <AuthGate authClient={authClient}>
-        {({ displayName }) => <div>Welcome {displayName}</div>}
+        {({ displayName }) => <div>Restored {displayName}</div>}
       </AuthGate>,
     );
 
-    expect(await screen.findByText("Welcome Coach Chavez")).toBeInTheDocument();
+    expect(await screen.findByText("Restored Coach Chavez")).toBeInTheDocument();
     expect(authClient.checkCoachAccess).toHaveBeenCalledWith(user);
   });
 
