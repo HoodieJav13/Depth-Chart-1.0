@@ -163,13 +163,24 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
   const confirmCode = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!codeSession || verificationCode.length !== 6) return;
+    if (!codeSession) return;
+
+    const codeInput = event.currentTarget.elements.namedItem("verification-code");
+    const submittedCode =
+      codeInput instanceof HTMLInputElement
+        ? codeInput.value.replace(/\D/g, "").slice(0, 6)
+        : verificationCode;
+
+    if (submittedCode.length !== 6) {
+      setErrorMessage("Enter the six-digit verification code.");
+      return;
+    }
 
     setIsBusy(true);
     setErrorMessage(null);
     setStatus("confirmingCode");
     try {
-      const confirmedUser = await codeSession.confirm(verificationCode);
+      const confirmedUser = await codeSession.confirm(submittedCode);
       setStatus("checkingAccess");
       const confirmedProfile = await authClient.checkCoachAccess(confirmedUser);
 
@@ -257,6 +268,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             <label htmlFor="verification-code">Verification code</label>
             <input
               id="verification-code"
+              name="verification-code"
               className="verification-code-input"
               value={verificationCode}
               onChange={(event) =>
@@ -275,7 +287,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             <button
               className="auth-primary"
               type="submit"
-              disabled={verificationCode.length !== 6 || isBusy}
+              disabled={isBusy}
             >
               {isBusy ? "Verifying…" : "Verify code"}
             </button>
