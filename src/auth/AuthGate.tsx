@@ -24,6 +24,7 @@ interface AuthGateProps {
 
 type GateStatus =
   | "loading"
+  | "confirmingCode"
   | "checkingAccess"
   | "signedOut"
   | "codeSent"
@@ -166,6 +167,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
     setIsBusy(true);
     setErrorMessage(null);
+    setStatus("confirmingCode");
     try {
       const confirmedUser = await codeSession.confirm(verificationCode);
       setStatus("checkingAccess");
@@ -206,11 +208,22 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     });
   }
 
-  if (status === "loading" || status === "checkingAccess") {
+  if (
+    status === "loading" ||
+    status === "confirmingCode" ||
+    status === "checkingAccess"
+  ) {
+    const loadingMessage =
+      status === "confirmingCode"
+        ? "Confirming code with Firebase…"
+        : status === "checkingAccess"
+          ? "Verifying coach approval in Firestore…"
+          : "Checking sign-in…";
+
     return (
       <main className="auth-shell">
-        <div className="auth-loading">
-          {status === "checkingAccess" ? "Verifying coach access…" : "Checking sign-in…"}
+        <div className="auth-loading" role="status">
+          {loadingMessage}
         </div>
       </main>
     );
