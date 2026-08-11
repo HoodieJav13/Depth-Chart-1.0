@@ -91,7 +91,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     const unsubscribe = authClient.subscribe(
       (nextUser) => {
         const requestId = ++accessRequest;
-
         if (!nextUser) {
           if (!active) return;
           setUser(null);
@@ -111,7 +110,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
           .checkCoachAccess(nextUser)
           .then((nextProfile) => {
             if (!active || requestId !== accessRequest) return;
-
             if (!nextProfile) {
               setUser(nextUser);
               setProfile(null);
@@ -119,7 +117,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
               setStatus("denied");
               return;
             }
-
             setUser(nextUser);
             setProfile(nextProfile);
             setDenialMessage(null);
@@ -127,7 +124,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
           })
           .catch((error) => {
             if (!active || requestId !== accessRequest) return;
-
             if (isCoachAccessDenial(error)) {
               setUser(nextUser);
               setProfile(null);
@@ -135,7 +131,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
               setStatus("denied");
               return;
             }
-
             setUser(null);
             setProfile(null);
             setStatus("signedOut");
@@ -182,13 +177,9 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
   const verifyCode = async () => {
     if (!codeSession || isBusy) return;
-
-    const submittedCode = (
-      verificationInputRef.current?.value ?? verificationCode
-    )
+    const submittedCode = (verificationInputRef.current?.value ?? verificationCode)
       .replace(/\D/g, "")
       .slice(0, 6);
-
     if (submittedCode.length !== 6) {
       setErrorMessage("Enter the six-digit verification code.");
       return;
@@ -205,14 +196,12 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
       setUser(confirmedUser);
       setStatus("checkingAccess");
       const confirmedProfile = await authClient.checkCoachAccess(confirmedUser);
-
       if (!confirmedProfile) {
         setProfile(null);
         setDenialMessage(GENERIC_DENIAL);
         setStatus("denied");
         return;
       }
-
       setProfile(confirmedProfile);
       setDenialMessage(null);
       setStatus("signedIn");
@@ -224,7 +213,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
         setStatus("denied");
         return;
       }
-
       setStatus("codeSent");
       setErrorMessage(errorMessageFor(error));
     } finally {
@@ -234,12 +222,10 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
   const retryCoachAccess = async () => {
     if (!user || isBusy) return;
-
     setIsBusy(true);
     setDenialMessage(null);
     setErrorMessage(null);
     setStatus("checkingAccess");
-
     try {
       const nextProfile = await authClient.checkCoachAccess(user);
       if (!nextProfile) {
@@ -248,7 +234,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
         setStatus("denied");
         return;
       }
-
       setProfile(nextProfile);
       setStatus("signedIn");
     } catch (error) {
@@ -276,7 +261,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     setDenialMessage(null);
   };
 
-  const useAnotherNumber = async () => {
+  const switchNumber = async () => {
     try {
       await authClient.signOut();
     } finally {
@@ -292,23 +277,16 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     });
   }
 
-  if (
-    status === "loading" ||
-    status === "confirmingCode" ||
-    status === "checkingAccess"
-  ) {
+  if (status === "loading" || status === "confirmingCode" || status === "checkingAccess") {
     const loadingMessage =
       status === "confirmingCode"
         ? "Confirming code with Firebase…"
         : status === "checkingAccess"
           ? "Verifying coach approval in Firestore…"
           : "Checking sign-in…";
-
     return (
       <main className="auth-shell">
-        <div className="auth-loading" role="status">
-          {loadingMessage}
-        </div>
+        <div className="auth-loading" role="status">{loadingMessage}</div>
       </main>
     );
   }
@@ -335,7 +313,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             <button type="button" disabled={isBusy} onClick={() => void retryCoachAccess()}>
               {isBusy ? "Checking…" : "Retry access"}
             </button>
-            <button type="button" disabled={isBusy} onClick={() => void useAnotherNumber()}>
+            <button type="button" disabled={isBusy} onClick={() => void switchNumber()}>
               Use another number
             </button>
             <p className="auth-disclaimer">Auth access diagnostic build {AUTH_DIAGNOSTIC_BUILD}</p>
@@ -344,10 +322,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
           <form className="auth-form" onSubmit={submitVerification}>
             <p className="auth-intro">
               Enter the six-digit code sent to{" "}
-              <strong>
-                {normalizedPhone ? formatE164PhoneNumber(normalizedPhone) : "your phone"}
-              </strong>
-              .
+              <strong>{normalizedPhone ? formatE164PhoneNumber(normalizedPhone) : "your phone"}</strong>.
             </p>
             <label htmlFor="verification-code">Verification code</label>
             <input
@@ -356,37 +331,24 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
               name="verification-code"
               className="verification-code-input"
               value={verificationCode}
-              onChange={(event) =>
-                setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
-              }
+              onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric"
               autoComplete="one-time-code"
               autoFocus
               placeholder="123456"
             />
-            {errorMessage ? (
-              <p className="auth-error" role="alert">
-                {errorMessage}
-              </p>
-            ) : null}
-            <button
-              className="auth-primary"
-              type="button"
-              disabled={isBusy}
-              onClick={() => void verifyCode()}
-            >
+            {errorMessage ? <p className="auth-error" role="alert">{errorMessage}</p> : null}
+            <button className="auth-primary" type="button" disabled={isBusy} onClick={() => void verifyCode()}>
               {isBusy ? "Verifying…" : "Verify code"}
             </button>
-            <button className="auth-secondary" type="button" onClick={() => void useAnotherNumber()}>
+            <button className="auth-secondary" type="button" onClick={() => void switchNumber()}>
               Use a different number
             </button>
             <p className="auth-disclaimer">Auth direct-click build {AUTH_DIAGNOSTIC_BUILD}</p>
           </form>
         ) : (
           <form className="auth-form" onSubmit={(event) => void requestCode(event)}>
-            <p className="auth-intro">
-              Enter an approved coach phone number to continue.
-            </p>
+            <p className="auth-intro">Enter an approved coach phone number to continue.</p>
             <label htmlFor="phone-number">Phone number</label>
             <input
               id="phone-number"
@@ -397,22 +359,11 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
               placeholder="(505) 555-0123"
               autoFocus
             />
-            {errorMessage ? (
-              <p className="auth-error" role="alert">
-                {errorMessage}
-              </p>
-            ) : null}
-            <button
-              id="send-code-button"
-              className="auth-primary"
-              type="submit"
-              disabled={isBusy}
-            >
+            {errorMessage ? <p className="auth-error" role="alert">{errorMessage}</p> : null}
+            <button id="send-code-button" className="auth-primary" type="submit" disabled={isBusy}>
               {isBusy ? "Sending…" : "Continue"}
             </button>
-            <p className="auth-disclaimer">
-              We’ll text a verification code. Standard SMS rates may apply.
-            </p>
+            <p className="auth-disclaimer">We’ll text a verification code. Standard SMS rates may apply.</p>
           </form>
         )}
       </section>
