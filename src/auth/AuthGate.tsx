@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type {
   AuthClient,
   AuthUser,
@@ -31,7 +31,7 @@ type GateStatus =
   | "signedIn"
   | "denied";
 
-const AUTH_DIAGNOSTIC_BUILD = "A4";
+const AUTH_DIAGNOSTIC_BUILD = "A5";
 
 const errorCodeFor = (error: unknown): string =>
   typeof error === "object" && error && "code" in error ? String(error.code) : "";
@@ -77,7 +77,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
   const [codeSession, setCodeSession] = useState<PhoneCodeSession | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [verifyPressAcknowledged, setVerifyPressAcknowledged] = useState(false);
+  const verificationInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -151,7 +151,6 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
     setIsBusy(true);
     setErrorMessage(null);
-    setVerifyPressAcknowledged(false);
     try {
       const session = await authClient.requestCode(phoneNumber, "send-code-button");
       setNormalizedPhone(phoneNumber);
@@ -165,15 +164,14 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     }
   };
 
-  const confirmCode = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!codeSession) return;
+  const verifyCode = async () => {
+    if (!codeSession || isBusy) return;
 
-    const codeInput = event.currentTarget.elements.namedItem("verification-code");
-    const submittedCode =
-      codeInput instanceof HTMLInputElement
-        ? codeInput.value.replace(/\D/g, "").slice(0, 6)
-        : verificationCode;
+    const submittedCode = (
+      verificationInputRef.current?.value ?? verificationCode
+    )
+      .replace(/\D/g, "")
+      .slice(0, 6);
 
     if (submittedCode.length !== 6) {
       setErrorMessage("Enter the six-digit verification code.");
@@ -207,13 +205,17 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
     }
   };
 
+  const submitVerification = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void verifyCode();
+  };
+
   const resetSignIn = () => {
     setStatus("signedOut");
     setNormalizedPhone(null);
     setCodeSession(null);
     setVerificationCode("");
     setErrorMessage(null);
-    setVerifyPressAcknowledged(false);
   };
 
   if (status === "signedIn" && user?.phoneNumber && profile) {
@@ -262,7 +264,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             </button>
           </div>
         ) : status === "codeSent" ? (
-          <form className="auth-form" onSubmit={(event) => void confirmCode(event)}>
+          <form className="auth-form" onSubmit={submitVerification}>
             <p className="auth-intro">
               Enter the six-digit code sent to{" "}
               <strong>
@@ -272,6 +274,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             </p>
             <label htmlFor="verification-code">Verification code</label>
             <input
+              ref={verificationInputRef}
               id="verification-code"
               name="verification-code"
               className="verification-code-input"
@@ -291,20 +294,16 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             ) : null}
             <button
               className="auth-primary"
-              type="submit"
+              type="button"
               disabled={isBusy}
-              onPointerDown={() => setVerifyPressAcknowledged(true)}
+              onClick={() => void verifyCode()}
             >
-              {isBusy
-                ? "Verifying…"
-                : verifyPressAcknowledged
-                  ? "Press received…"
-                  : "Verify code"}
+              {isBusy ? "Verifying…" : "Verify code"}
             </button>
             <button className="auth-secondary" type="button" onClick={resetSignIn}>
               Use a different number
             </button>
-            <p className="auth-disclaimer">Auth diagnostic build {AUTH_DIAGNOSTIC_BUILD}</p>
+            <p className="auth-disclaimer">Auth direct-click build {AUTH_DIAGNOSTIC_BUILD}</p>
           </form>
         ) : (
           <form className="auth-form" onSubmit={(event) => void requestCode(event)}>
