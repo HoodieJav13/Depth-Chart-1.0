@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFirebaseAuthClient } from "./firebaseCompat";
 
-const installFirebaseStub = (snapshot: { exists: boolean; data?: () => Record<string, unknown> }) => {
+const installFirebaseStub = (snapshot: {
+  exists: boolean;
+  data?: () => Record<string, unknown>;
+}) => {
   const doc = vi.fn(() => ({
     get: vi.fn(async () => snapshot),
   }));
@@ -12,8 +15,13 @@ const installFirebaseStub = (snapshot: { exists: boolean; data?: () => Record<st
     signInWithPhoneNumber: vi.fn(),
     signOut: vi.fn(async () => undefined),
   };
+  class RecaptchaVerifierStub {
+    clear(): void {
+      // No-op in this focused access-check test.
+    }
+  }
   const authFactory = Object.assign(() => authInstance, {
-    RecaptchaVerifier: class { clear(): void {} },
+    RecaptchaVerifier: RecaptchaVerifierStub,
   });
 
   Object.defineProperty(window, "firebase", {
@@ -25,8 +33,6 @@ const installFirebaseStub = (snapshot: { exists: boolean; data?: () => Record<st
       firestore: () => ({ collection, runTransaction: vi.fn() }),
     },
   });
-
-  return { collection, doc };
 };
 
 afterEach(() => {
