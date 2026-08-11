@@ -391,7 +391,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             <input
               id="phone-number"
               value={phoneInput}
-              onChange={(event) => setPhoneInput(formatUsPhoneInput(event.target.value))
+              onChange={(event) => setPhoneInput(formatUsPhoneInput(event.target.value))}
               inputMode="tel"
               autoComplete="tel"
               placeholder="(505) 555-0123"
