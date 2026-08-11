@@ -25,10 +25,14 @@ class FakeAuthClient implements AuthClient {
 
   constructor(
     private readonly initialUser: AuthUser | null = null,
-    private readonly accessProfile: CoachAccessProfile | null = {
+    private accessProfile: CoachAccessProfile | null = {
       displayName: "Coach Chavez",
     },
   ) {}
+
+  setAccessProfile(profile: CoachAccessProfile | null): void {
+    this.accessProfile = profile;
+  }
 
   subscribe(listener: AuthStateListener): () => void {
     this.listener = listener;
@@ -85,7 +89,7 @@ class PendingConfirmClient implements AuthClient {
 describe("AuthGate", () => {
   it("formats the phone, requests an invisible challenge, and verifies server access", async () => {
     const authClient = new FakeAuthClient();
-    render(
+    const { container } = render(
       <AuthGate authClient={authClient}>
         {({ displayName, phoneNumber }) => (
           <div>
@@ -115,8 +119,8 @@ describe("AuthGate", () => {
     fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
 
     expect(
-      await screen.findByText("Signed in as Coach Chavez +15057307634"),
-    ).toBeInTheDocument();
+      await waitFor(() => container.textContent?.includes("Signed in as Coach Chavez +15057307634")),
+    ).toBe(true);
     expect(authClient.checkCoachAccess).toHaveBeenCalledWith({
       uid: "coach-1",
       phoneNumber: "+15057307634",
@@ -125,9 +129,9 @@ describe("AuthGate", () => {
 
   it("continues after a successful code confirmation without waiting for an observer event", async () => {
     const authClient = new ConfirmWithoutObserverClient();
-    render(
+    const { container } = render(
       <AuthGate authClient={authClient}>
-        {({ displayName }) => <div>Confirmed {displayName}</div>}
+        {({ displayName }) => <div>Welcome {displayName}</div>}
       </AuthGate>,
     );
 
@@ -141,7 +145,7 @@ describe("AuthGate", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
 
-    expect(await screen.findByText("Confirmed Coach Chavez")).toBeInTheDocument();
+    await waitFor(() => expect(container).toHaveTextContent("Welcome Coach Chavez"));
     expect(authClient.checkCoachAccess).toHaveBeenCalledWith({
       uid: "coach-1",
       phoneNumber: "+15057307634",
@@ -150,9 +154,9 @@ describe("AuthGate", () => {
 
   it("shows which verification boundary is currently pending", async () => {
     const authClient = new PendingConfirmClient();
-    render(
+    const { container } = render(
       <AuthGate authClient={authClient}>
-        {({ displayName }) => <div>Pending flow {displayName}</div>}
+        {({ displayName }) => <div>Welcome {displayName}</div>}
       </AuthGate>,
     );
 
@@ -169,39 +173,40 @@ describe("AuthGate", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Confirming code with Firebase");
 
     authClient.finishConfirmation();
-    expect(await screen.findByText("Pending flow Coach Chavez")).toBeInTheDocument();
+    await waitFor(() => expect(container).toHaveTextContent("Welcome Coach Chavez"));
   });
 
   it("restores a session only after server access is verified", async () => {
     const user = { uid: "coach-1", phoneNumber: "+15057307634" };
     const authClient = new FakeAuthClient(user, { displayName: "Coach Chavez" });
-
-    render(
+    const { container } = render(
       <AuthGate authClient={authClient}>
-        {({ displayName }) => <div>Restored {displayName}</div>}
+        {({ displayName }) => <div>Welcome {displayName}</div>}
       </AuthGate>,
     );
 
-    expect(await screen.findByText("Restored Coach Chavez")).toBeInTheDocument();
+    await waitFor(() => expect(container).toHaveTextContent("Welcome Coach Chavez"));
     expect(authClient.checkCoachAccess).toHaveBeenCalledWith(user);
   });
 
-  it("signs out a verified number without an active Firestore coach record", async () => {
-    const authClient = new FakeAuthClient(
-      { uid: "other", phoneNumber: "+15055550134" },
-      null,
-    );
-
-    render(
+  it("keeps a verified but unapproved session and can retry access without another SMS", async () => {
+    const user = { uid: "other", phoneNumber: "+15055550134" };
+    const authClient = new FakeAuthClient(user, null);
+    const { container } = render(
       <AuthGate authClient={authClient}>
-        {() => <div>Private chart</div>}
+        {({ displayName }) => <div>Private chart for {displayName}</div>}
       </AuthGate>,
     );
 
     expect(
       await screen.findByText("This phone number is not approved for coach access."),
     ).toBeInTheDocument();
-    await waitFor(() => expect(authClient.signOut).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText("Private chart")).not.toBeInTheDocument();
+    expect(authClient.signOut).not.toHaveBeenCalled();
+
+    authClient.setAccessProfile({ displayName: "Coach Chavez" });
+    fireEvent.click(screen.getByRole("button", { name: "Retry access" }));
+
+    await waitFor(() => expect(container).toHaveTextContent("Private chart for Coach Chavez"));
+    expect(authClient.requestCode).not.toHaveBeenCalled();
   });
 });
