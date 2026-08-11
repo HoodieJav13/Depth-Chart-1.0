@@ -106,7 +106,7 @@ const coachAccessError = (code: string, message: string): Error =>
 const describeValue = (value: unknown): string => {
   if (value === undefined) return "undefined";
   try {
-    return JSON.stringify(value);
+    return JSON.stringify(value) ?? String(value);
   } catch {
     return String(value);
   }
