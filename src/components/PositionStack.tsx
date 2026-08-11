@@ -47,7 +47,11 @@ export const PositionStack = ({
   return (
     <div
       className={`position-node${expanded ? " expanded" : ""}${dense ? " dense" : ""}`}
-      style={{ left: `${position.x}%`, top: `${position.y}%` }}
+      style={{
+        left: `${position.x}%`,
+        top: `${position.y}%`,
+        ...(dense ? { width: "48px" } : {}),
+      }}
       data-position-id={position.id}
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
