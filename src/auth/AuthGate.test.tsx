@@ -118,9 +118,9 @@ describe("AuthGate", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
 
-    expect(
-      await waitFor(() => container.textContent?.includes("Signed in as Coach Chavez +15057307634")),
-    ).toBe(true);
+    await waitFor(() =>
+      expect(container).toHaveTextContent("Signed in as Coach Chavez +15057307634"),
+    );
     expect(authClient.checkCoachAccess).toHaveBeenCalledWith({
       uid: "coach-1",
       phoneNumber: "+15057307634",
