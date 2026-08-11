@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 interface CoachSessionMenuProps {
   displayName: string;
   phoneNumber: string;
+  onOpenSnapshots?: () => void;
+  onOpenPrint?: () => void;
   onSignOut: () => Promise<void>;
 }
 
@@ -22,6 +24,8 @@ const initialsFor = (displayName: string): string => {
 export const CoachSessionMenu = ({
   displayName,
   phoneNumber,
+  onOpenSnapshots,
+  onOpenPrint,
   onSignOut,
 }: CoachSessionMenuProps) => {
   const [open, setOpen] = useState(false);
@@ -44,6 +48,11 @@ export const CoachSessionMenu = ({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
+
+  const runMenuAction = (action?: () => void) => {
+    setOpen(false);
+    action?.();
+  };
 
   return (
     <div className="coach-session-menu" ref={containerRef}>
@@ -70,6 +79,24 @@ export const CoachSessionMenu = ({
             <strong>{displayName}</strong>
             <span>Ending in {endingDigits(phoneNumber)}</span>
           </div>
+          {onOpenSnapshots ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => runMenuAction(onOpenSnapshots)}
+            >
+              Saved snapshots
+            </button>
+          ) : null}
+          {onOpenPrint ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => runMenuAction(onOpenPrint)}
+            >
+              Print depth chart
+            </button>
+          ) : null}
           <button
             type="button"
             role="menuitem"

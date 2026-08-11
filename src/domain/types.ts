@@ -6,6 +6,11 @@ export interface Player {
   number?: string | null;
 }
 
+export interface PlayerOverride {
+  name?: string;
+  number?: string | null;
+}
+
 export interface PositionConfig {
   id: string;
   label: string;
@@ -32,15 +37,36 @@ export interface FormationsConfig {
 export type PositionAssignments = Record<string, string[]>;
 export type FormationAssignments = Record<string, PositionAssignments>;
 
-export interface DepthChartState {
+export interface DepthChartStateV1 {
   version: 1;
   assignments: FormationAssignments;
   addedPlayers: Player[];
 }
 
+export interface DepthChartState {
+  version: 2;
+  assignments: FormationAssignments;
+  addedPlayers: Player[];
+  playerOverrides: Record<string, PlayerOverride>;
+  archivedPlayerIds: string[];
+  revision: number;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+}
+
 export interface AddPlayerInput {
   name: string;
   number?: string | null;
+}
+
+export interface UpdatePlayerInput {
+  playerId: string;
+  name: string;
+  number?: string | null;
+}
+
+export interface ArchivePlayerInput {
+  playerId: string;
 }
 
 export interface MoveAssignmentInput {
@@ -61,3 +87,23 @@ export interface UnassignPlayerInput {
   playerId: string;
   formationId: string;
 }
+
+export type StorePhase = "idle" | "loading" | "saving" | "saved" | "offline" | "error";
+
+export interface StoreStatus {
+  phase: StorePhase;
+  canUndo: boolean;
+  canRetry: boolean;
+  message?: string;
+  lastSavedAt?: string;
+}
+
+export interface DepthChartSnapshot {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy?: string | null;
+  state: DepthChartState;
+}
+
+export type MigrationResult = "created" | "existing" | "skipped";
