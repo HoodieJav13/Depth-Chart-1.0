@@ -100,6 +100,18 @@ const toAuthUser = (user: FirebaseCompatUser): AuthUser => ({
   phoneNumber: user.phoneNumber,
 });
 
+const coachAccessError = (code: string, message: string): Error =>
+  Object.assign(new Error(message), { code });
+
+const describeValue = (value: unknown): string => {
+  if (value === undefined) return "undefined";
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+};
+
 class FirebaseAuthClient implements AuthClient {
   private verifier: FirebaseCompatRecaptchaVerifier | null = null;
 
@@ -144,14 +156,34 @@ class FirebaseAuthClient implements AuthClient {
   }
 
   async checkCoachAccess(user: AuthUser): Promise<CoachAccessProfile | null> {
-    if (!user.phoneNumber) return null;
+    if (!user.phoneNumber) {
+      throw coachAccessError(
+        "coach-access/no-phone-number",
+        "Firebase authenticated this account without a phone number.",
+      );
+    }
+
+    const documentPath = `approvedCoaches/${user.phoneNumber}`;
     const snapshot = await this.firestore
       .collection("approvedCoaches")
       .doc(user.phoneNumber)
       .get({ source: "server" });
-    if (!snapshot.exists) return null;
+
+    if (!snapshot.exists) {
+      throw coachAccessError(
+        "coach-access/document-not-found",
+        `No Firestore approval document exists at ${documentPath}.`,
+      );
+    }
+
     const data = snapshot.data() ?? {};
-    if (data.active !== true) return null;
+    if (data.active !== true) {
+      throw coachAccessError(
+        "coach-access/inactive",
+        `The approval document exists at ${documentPath}, but active is ${describeValue(data.active)} (${typeof data.active}); expected Boolean true.`,
+      );
+    }
+
     const displayName =
       typeof data.displayName === "string" && data.displayName.trim()
         ? data.displayName.trim()
