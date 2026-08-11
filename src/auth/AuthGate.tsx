@@ -31,10 +31,14 @@ type GateStatus =
   | "signedIn"
   | "denied";
 
-const AUTH_DIAGNOSTIC_BUILD = "A5";
+const AUTH_DIAGNOSTIC_BUILD = "A6";
+const GENERIC_DENIAL = "This phone number is not approved for coach access.";
 
 const errorCodeFor = (error: unknown): string =>
   typeof error === "object" && error && "code" in error ? String(error.code) : "";
+
+const isCoachAccessDenial = (error: unknown): boolean =>
+  errorCodeFor(error).startsWith("coach-access/");
 
 const errorMessageFor = (error: unknown): string => {
   switch (errorCodeFor(error)) {
@@ -76,12 +80,12 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
   const [verificationCode, setVerificationCode] = useState("");
   const [codeSession, setCodeSession] = useState<PhoneCodeSession | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [denialMessage, setDenialMessage] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const verificationInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
-    let denied = false;
     let accessRequest = 0;
 
     const unsubscribe = authClient.subscribe(
@@ -92,10 +96,14 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
           if (!active) return;
           setUser(null);
           setProfile(null);
-          setStatus(denied ? "denied" : "signedOut");
+          setDenialMessage(null);
+          setStatus("signedOut");
           return;
         }
 
+        setUser(nextUser);
+        setProfile(null);
+        setDenialMessage(null);
         setStatus("checkingAccess");
         setErrorMessage(null);
 
@@ -105,22 +113,29 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             if (!active || requestId !== accessRequest) return;
 
             if (!nextProfile) {
-              denied = true;
-              setUser(null);
+              setUser(nextUser);
               setProfile(null);
+              setDenialMessage(GENERIC_DENIAL);
               setStatus("denied");
-              void authClient.signOut();
               return;
             }
 
-            denied = false;
             setUser(nextUser);
             setProfile(nextProfile);
+            setDenialMessage(null);
             setStatus("signedIn");
           })
           .catch((error) => {
             if (!active || requestId !== accessRequest) return;
-            denied = false;
+
+            if (isCoachAccessDenial(error)) {
+              setUser(nextUser);
+              setProfile(null);
+              setDenialMessage(errorMessageFor(error));
+              setStatus("denied");
+              return;
+            }
+
             setUser(null);
             setProfile(null);
             setStatus("signedOut");
@@ -151,6 +166,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
     setIsBusy(true);
     setErrorMessage(null);
+    setDenialMessage(null);
     try {
       const session = await authClient.requestCode(phoneNumber, "send-code-button");
       setNormalizedPhone(phoneNumber);
@@ -180,26 +196,65 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
     setIsBusy(true);
     setErrorMessage(null);
+    setDenialMessage(null);
     setStatus("confirmingCode");
+    let confirmedUser: AuthUser | null = null;
+
     try {
-      const confirmedUser = await codeSession.confirm(submittedCode);
+      confirmedUser = await codeSession.confirm(submittedCode);
+      setUser(confirmedUser);
       setStatus("checkingAccess");
       const confirmedProfile = await authClient.checkCoachAccess(confirmedUser);
 
       if (!confirmedProfile) {
-        setUser(null);
         setProfile(null);
+        setDenialMessage(GENERIC_DENIAL);
         setStatus("denied");
-        void authClient.signOut();
         return;
       }
 
-      setUser(confirmedUser);
       setProfile(confirmedProfile);
+      setDenialMessage(null);
       setStatus("signedIn");
     } catch (error) {
+      if (confirmedUser && isCoachAccessDenial(error)) {
+        setUser(confirmedUser);
+        setProfile(null);
+        setDenialMessage(errorMessageFor(error));
+        setStatus("denied");
+        return;
+      }
+
       setStatus("codeSent");
       setErrorMessage(errorMessageFor(error));
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const retryCoachAccess = async () => {
+    if (!user || isBusy) return;
+
+    setIsBusy(true);
+    setDenialMessage(null);
+    setErrorMessage(null);
+    setStatus("checkingAccess");
+
+    try {
+      const nextProfile = await authClient.checkCoachAccess(user);
+      if (!nextProfile) {
+        setProfile(null);
+        setDenialMessage(GENERIC_DENIAL);
+        setStatus("denied");
+        return;
+      }
+
+      setProfile(nextProfile);
+      setStatus("signedIn");
+    } catch (error) {
+      setProfile(null);
+      setDenialMessage(errorMessageFor(error));
+      setStatus("denied");
     } finally {
       setIsBusy(false);
     }
@@ -212,10 +267,21 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
 
   const resetSignIn = () => {
     setStatus("signedOut");
+    setUser(null);
+    setProfile(null);
     setNormalizedPhone(null);
     setCodeSession(null);
     setVerificationCode("");
     setErrorMessage(null);
+    setDenialMessage(null);
+  };
+
+  const useAnotherNumber = async () => {
+    try {
+      await authClient.signOut();
+    } finally {
+      resetSignIn();
+    }
   };
 
   if (status === "signedIn" && user?.phoneNumber && profile) {
@@ -258,10 +324,21 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
         {status === "denied" ? (
           <div className="auth-denied" role="alert">
             <h2>Access not approved</h2>
-            <p>This phone number is not approved for coach access.</p>
-            <button type="button" onClick={resetSignIn}>
+            <p>{denialMessage ?? GENERIC_DENIAL}</p>
+            {user?.phoneNumber ? (
+              <p className="auth-disclaimer">
+                Verified Firebase phone: {user.phoneNumber}
+                <br />
+                Checked Firestore: approvedCoaches/{user.phoneNumber}
+              </p>
+            ) : null}
+            <button type="button" disabled={isBusy} onClick={() => void retryCoachAccess()}>
+              {isBusy ? "Checking…" : "Retry access"}
+            </button>
+            <button type="button" disabled={isBusy} onClick={() => void useAnotherNumber()}>
               Use another number
             </button>
+            <p className="auth-disclaimer">Auth access diagnostic build {AUTH_DIAGNOSTIC_BUILD}</p>
           </div>
         ) : status === "codeSent" ? (
           <form className="auth-form" onSubmit={submitVerification}>
@@ -300,7 +377,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             >
               {isBusy ? "Verifying…" : "Verify code"}
             </button>
-            <button className="auth-secondary" type="button" onClick={resetSignIn}>
+            <button className="auth-secondary" type="button" onClick={() => void useAnotherNumber()}>
               Use a different number
             </button>
             <p className="auth-disclaimer">Auth direct-click build {AUTH_DIAGNOSTIC_BUILD}</p>
@@ -314,7 +391,7 @@ export const AuthGate = ({ authClient, children }: AuthGateProps) => {
             <input
               id="phone-number"
               value={phoneInput}
-              onChange={(event) => setPhoneInput(formatUsPhoneInput(event.target.value))}
+              onChange={(event) => setPhoneInput(formatUsPhoneInput(event.target.value))
               inputMode="tel"
               autoComplete="tel"
               placeholder="(505) 555-0123"
