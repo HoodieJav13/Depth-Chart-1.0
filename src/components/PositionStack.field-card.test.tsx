@@ -14,6 +14,7 @@ const position: PositionConfig = {
 const players = new Map<string, Player>([
   ["p01", { id: "p01", name: "Skyler Pasternak", number: "12" }],
   ["p02", { id: "p02", name: "Malachi", number: "7" }],
+  ["p03", { id: "p03", name: "Tristan Lee", number: "25" }],
 ]);
 
 const renderPosition = ({
@@ -61,6 +62,34 @@ describe("PositionStack field card", () => {
     expect(card.querySelector(".opposite-position-chip")).toHaveTextContent("FS");
     expect(container.querySelector(".position-marker")).toBeNull();
     expect(container.querySelector(".starter-preview")).toBeNull();
+  });
+
+  it("reserves the card header for depth metadata so the badge cannot occlude the full player name", () => {
+    const { container } = renderPosition({ playerIds: ["p03", "p02"] });
+    const header = container.querySelector(".field-card-header");
+    const name = container.querySelector(".field-player-name");
+    const depth = container.querySelector(".additional-depth");
+
+    expect(name).toHaveTextContent("Tristan Lee");
+    expect(header).toContainElement(depth as HTMLElement);
+    expect(name).not.toContainElement(depth as HTMLElement);
+  });
+
+  it("distinguishes the selected source card from other valid placement targets", () => {
+    const source = renderPosition({ selectedPlayerId: "p01" });
+    const sourceCard = source.getByRole("button", { name: "Q depth chart, 2 players" });
+    expect(sourceCard).toHaveClass("selected-source");
+    expect(sourceCard).not.toHaveClass("placement-target");
+    expect(sourceCard).toHaveAttribute("data-placement-state", "source");
+    expect(sourceCard).toHaveAttribute("aria-current", "true");
+    source.unmount();
+
+    const target = renderPosition({ selectedPlayerId: "p03" });
+    const targetCard = target.getByRole("button", { name: "Q depth chart, 2 players" });
+    expect(targetCard).toHaveClass("placement-target");
+    expect(targetCard).not.toHaveClass("selected-source");
+    expect(targetCard).toHaveAttribute("data-placement-state", "target");
+    expect(targetCard).not.toHaveAttribute("aria-current");
   });
 
   it("renders an empty position using the same non-draggable card surface", () => {

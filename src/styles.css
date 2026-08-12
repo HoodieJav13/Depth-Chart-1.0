@@ -117,6 +117,7 @@ button:focus-visible {
 }
 
 .workspace {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 56px;
   height: calc(100vh - 78px);
@@ -198,6 +199,34 @@ button:focus-visible {
   transform: rotate(180deg);
 }
 
+.formation-coordinate-layer {
+  position: absolute;
+  top: -43%;
+  right: 0;
+  left: 0;
+  height: 210%;
+}
+
+.line-of-scrimmage {
+  position: absolute;
+  z-index: 3;
+  right: 5%;
+  left: 5%;
+  border-top: 1px solid rgba(244, 125, 35, 0.38);
+  pointer-events: none;
+}
+
+.line-of-scrimmage::after {
+  position: absolute;
+  top: -16px;
+  left: 0;
+  color: rgba(255, 184, 133, 0.68);
+  content: "LOS";
+  font-size: 0.6875rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
 .position-node {
   position: absolute;
   z-index: 5;
@@ -216,8 +245,8 @@ button:focus-visible {
   position: absolute;
   z-index: 6;
   display: grid;
-  gap: clamp(5px, 0.8vw, 11px);
-  width: clamp(220px, 22%, 270px);
+  gap: clamp(6px, 0.65vw, 10px);
+  width: clamp(360px, 32vw, 400px);
   transform: translate(-50%, -50%);
 }
 
@@ -226,7 +255,7 @@ button:focus-visible {
 }
 
 .position-lane.defensive-front {
-  width: min(30%, 340px);
+  width: clamp(300px, 28vw, 350px);
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -240,38 +269,34 @@ button:focus-visible {
 .position-node.lane-position .field-position-card {
   width: 100%;
   min-width: 0;
-  min-height: 70px;
+  min-height: 94px;
   padding-right: 2px;
   padding-left: 2px;
 }
 
 .position-node.lane-position .field-player-name {
-  font-size: 0.5rem;
-  overflow-wrap: normal;
-  word-break: normal;
+  font-size: 0.6875rem;
+  overflow-wrap: anywhere;
 }
 
 .position-node.lane-position .field-jersey-number {
-  font-size: 1.65rem;
+  font-size: 1.85rem;
 }
 
 .position-node.lane-position .opposite-position-chip {
-  max-width: none;
-  padding: 1px 2px;
-  font-size: 0.48rem;
-  text-overflow: clip;
+  max-width: 30px;
 }
 
 .field-position-card {
   position: relative;
   display: flex;
   width: 108px;
-  min-height: 82px;
+  min-height: 90px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 17px 8px 9px;
+  padding: 6px 8px 10px;
   border: 1px solid #687b84;
   border-radius: 7px;
   background: #1b313c;
@@ -294,40 +319,68 @@ button:focus-visible {
 }
 
 .field-position-card.empty {
-  min-height: 82px;
+  min-height: 90px;
   border-style: dashed;
   background: rgba(20, 40, 45, 0.82);
 }
 
 .field-position-card.placement-target {
+  border-color: rgba(225, 171, 126, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(244, 125, 35, 0.12), 0 7px 18px rgba(0, 0, 0, 0.34);
+}
+
+.field-position-card.placement-target:hover,
+.field-position-card.placement-target:focus-visible {
   border-color: var(--orange);
   box-shadow: 0 0 0 1px var(--orange), 0 0 22px rgba(244, 125, 35, 0.24);
 }
 
+.field-position-card.selected-source {
+  border-color: var(--orange);
+  background: #3a2a21;
+  box-shadow: 0 0 0 2px var(--orange), 0 0 26px rgba(244, 125, 35, 0.32);
+}
+
+.field-card-header {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 19px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.field-card-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
 .field-position-chip {
-  position: absolute;
-  top: 6px;
-  left: 7px;
+  flex: 0 0 auto;
   color: #aebbc1;
   font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-  font-size: 0.68rem;
+  font-size: 0.6875rem;
   letter-spacing: 0.07em;
   line-height: 1;
 }
 
 .additional-depth {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
   display: grid;
-  min-width: 21px;
-  height: 21px;
+  min-width: 20px;
+  height: 19px;
+  flex: 0 0 auto;
   place-items: center;
   border: 1px solid #59676e;
   border-radius: 99px;
   background: #0b141a;
   color: #d6dee1;
-  font-size: 0.66rem;
+  font-size: 0.6875rem;
   font-weight: 800;
 }
 
@@ -342,7 +395,7 @@ button:focus-visible {
 .field-player-name {
   display: block;
   color: #f7fafb;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 750;
   line-height: 1.08;
   text-align: center;
@@ -350,21 +403,18 @@ button:focus-visible {
 }
 
 .opposite-position-chip {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  max-width: 52%;
-  padding: 2px 5px;
+  max-width: 46px;
+  padding: 2px 4px;
   overflow: hidden;
   border: 1px solid #53666f;
   border-radius: 99px;
   background: #0c171d;
   color: #d2dadd;
-  font-size: 0.57rem;
+  font-size: 0.6875rem;
   font-weight: 850;
   letter-spacing: 0.04em;
   line-height: 1.15;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -575,7 +625,7 @@ button:focus-visible {
   min-width: 0;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   padding: 17px 6px;
   border: 0;
   background: #0c1720;
@@ -588,7 +638,7 @@ button:focus-visible {
   color: #fff;
 }
 
-.roster-rail-handle svg {
+.roster-rail-handle > svg:first-child {
   width: 25px;
   height: 25px;
   fill: none;
@@ -609,11 +659,14 @@ button:focus-visible {
   font-weight: 850;
 }
 
-.roster-rail-handle strong {
-  font-size: 0.62rem;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
+.roster-rail-handle .rail-chevron {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  fill: none;
+  stroke: #81919a;
+  stroke-width: 2;
+  transform: rotate(90deg);
 }
 
 .drawer-heading {
@@ -709,6 +762,13 @@ button:focus-visible {
   gap: 5px;
   padding: 12px;
   overflow-y: auto;
+}
+
+@media (min-width: 1181px) {
+  .right-surface-roster .position-lane.offensive-line,
+  .right-surface-position .position-lane.offensive-line {
+    width: 340px;
+  }
 }
 
 .mobile-depth-list,
@@ -827,6 +887,27 @@ button:focus-visible {
 }
 
 @media (min-width: 761px) and (max-width: 1180px) {
+  .workspace,
+  .workspace.right-surface-roster,
+  .workspace.right-surface-position {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desktop-drawer {
+    position: absolute;
+    z-index: 40;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 56px;
+  }
+
+  .desktop-drawer.expanded,
+  .position-detail-panel {
+    width: 288px;
+    box-shadow: -18px 0 34px rgba(0, 0, 0, 0.42);
+  }
+
   .app-header {
     grid-template-columns: minmax(180px, 1fr) minmax(300px, 1.15fr) minmax(54px, 0.35fr);
     padding: 0 14px;
@@ -845,14 +926,14 @@ button:focus-visible {
   }
 
   .position-node {
-    width: 80px;
+    width: clamp(75px, 6.8vw, 80px);
   }
 
   .field-position-card {
     width: 100%;
     min-height: clamp(68px, 9.5vh, 78px);
-    padding-right: 6px;
-    padding-left: 6px;
+    padding-right: 5px;
+    padding-left: 5px;
   }
 
   .field-jersey-number {
@@ -860,24 +941,24 @@ button:focus-visible {
   }
 
   .field-player-name {
-    font-size: clamp(0.62rem, 1.1vw, 0.7rem);
+    font-size: clamp(0.6875rem, 1.1vw, 0.75rem);
   }
 
   .position-lane {
-    width: clamp(220px, 24%, 250px);
+    width: clamp(325px, calc(32vw - 1px), 380px);
   }
 
   .position-lane.defensive-front {
-    width: min(29%, 330px);
+    width: clamp(300px, 28vw, 330px);
   }
 
   .position-node.lane-position .field-position-card {
-    min-height: clamp(68px, 9.5vh, 76px);
+    min-height: clamp(88px, 12vh, 96px);
   }
 
   .position-node.lane-position .field-position-chip,
   .position-node.lane-position .opposite-position-chip {
-    font-size: 0.5rem;
+    font-size: 0.6875rem;
   }
 
   .position-node.lane-position .field-jersey-number {
@@ -885,24 +966,7 @@ button:focus-visible {
   }
 
   .position-node.lane-position .field-player-name {
-    font-size: clamp(0.46rem, 0.72vw, 0.56rem);
-  }
-
-  @media (max-width: 1100px) {
-    .right-surface-roster .position-lane.offensive-line,
-    .right-surface-position .position-lane.offensive-line {
-      width: min(200px, 28%);
-    }
-
-    .right-surface-roster .position-lane.defensive-front,
-    .right-surface-position .position-lane.defensive-front {
-      width: 27%;
-    }
-
-    .right-surface-roster .position-node.lane-position .field-player-name,
-    .right-surface-position .position-node.lane-position .field-player-name {
-      font-size: 0.46rem;
-    }
+    font-size: 0.6875rem;
   }
 }
 

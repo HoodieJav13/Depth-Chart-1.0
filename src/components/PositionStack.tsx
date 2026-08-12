@@ -33,6 +33,14 @@ export const PositionStack = ({
     const player = playersById.get(id);
     return player ? [player] : [];
   });
+  const isSelectedSource = Boolean(
+    selectedPlayerId && playerIds.includes(selectedPlayerId),
+  );
+  const placementState = isSelectedSource
+    ? "source"
+    : selectedPlayerId
+      ? "target"
+      : "idle";
 
   const handlePositionClick = () => {
     if (suppressClickRef.current) return;
@@ -75,27 +83,33 @@ export const PositionStack = ({
       onDrop={handleDrop}
     >
       <button
-        className={`field-position-card${players.length ? " occupied" : " empty"}${selectedPlayerId ? " placement-target" : ""}`}
+        className={`field-position-card${players.length ? " occupied" : " empty"}${isSelectedSource ? " selected-source" : selectedPlayerId ? " placement-target" : ""}`}
         type="button"
         draggable={Boolean(players[0])}
         aria-expanded={expanded}
+        aria-current={isSelectedSource ? "true" : undefined}
         aria-label={`${position.label} depth chart, ${players.length} players`}
+        data-placement-state={placementState}
         onClick={handlePositionClick}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <span className="field-position-chip">{position.label}</span>
+        <span className="field-card-header">
+          <span className="field-position-chip">{position.label}</span>
+          <span className="field-card-meta">
+            {players[0] && oppositePositionLabels.length ? (
+              <span className="opposite-position-chip">{oppositePositionLabels.join(" / ")}</span>
+            ) : null}
+            {players.length > 1 ? (
+              <span className="additional-depth">+{players.length - 1}</span>
+            ) : null}
+          </span>
+        </span>
         {players[0]?.number?.trim() ? (
           <span className="field-jersey-number">{players[0].number.trim()}</span>
         ) : null}
         {players[0] ? (
           <span className="field-player-name">{players[0].name}</span>
-        ) : null}
-        {players[0] && oppositePositionLabels.length ? (
-          <span className="opposite-position-chip">{oppositePositionLabels.join(" / ")}</span>
-        ) : null}
-        {players.length > 1 ? (
-          <span className="additional-depth">+{players.length - 1}</span>
         ) : null}
       </button>
 

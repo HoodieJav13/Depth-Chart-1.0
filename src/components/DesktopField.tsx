@@ -65,18 +65,21 @@ export const DesktopField = ({
       <div className="football-field">
         <span className="field-label field-label-left">EAGLES</span>
         <span className="field-label field-label-right">ELDORADO</span>
-        {lanePositions.length ? (
-          <div
-            className={`position-lane ${laneDefinition.name}`}
-            data-position-lane={laneDefinition.name}
-            style={{ left: "50%", top: "30%" }}
-          >
-            {lanePositions.map((position) => renderPosition(position, true))}
-          </div>
-        ) : null}
-        {formation.positions
-          .filter((position) => !laneIds.has(position.id))
-          .map((position) => renderPosition(position))}
+        <div className="formation-coordinate-layer">
+          <div className="line-of-scrimmage" style={{ top: "30%" }} aria-hidden="true" />
+          {lanePositions.length ? (
+            <div
+              className={`position-lane ${laneDefinition.name}`}
+              data-position-lane={laneDefinition.name}
+              style={{ left: "50%", top: "30%" }}
+            >
+              {lanePositions.map((position) => renderPosition(position, true))}
+            </div>
+          ) : null}
+          {formation.positions
+            .filter((position) => !laneIds.has(position.id))
+            .map((position) => renderPosition(position))}
+        </div>
       </div>
     </main>
   );

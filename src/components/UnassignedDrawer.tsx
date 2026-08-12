@@ -84,7 +84,7 @@ export const UnassignedDrawer = ({
           >
             <RosterIcon />
             <span>{players.length}</span>
-            <strong>Roster</strong>
+            <ChevronIcon className="rail-chevron" />
           </button>
         ) : (
           <>

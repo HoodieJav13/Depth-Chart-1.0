@@ -33,6 +33,8 @@ describe("UnassignedDrawer desktop rail", () => {
         name: "Open unassigned players, 1 player",
       }),
     ).toBeInTheDocument();
+    expect(within(desktop as HTMLElement).queryByText("Roster")).toBeNull();
+    expect(desktop?.querySelector(".rail-chevron")).toBeInTheDocument();
     expect(within(desktop as HTMLElement).queryByRole("searchbox")).toBeNull();
 
     fireEvent.click(

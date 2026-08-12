@@ -53,9 +53,15 @@ const expectGroupedLane = (
   positionIds: string[],
 ) => {
   const { container } = renderField(formation);
+  const coordinateLayer = container.querySelector<HTMLElement>(".formation-coordinate-layer");
   const lane = container.querySelector<HTMLElement>(`[data-position-lane="${laneName}"]`);
+  const lineOfScrimmage = container.querySelector<HTMLElement>(".line-of-scrimmage");
+  expect(coordinateLayer).not.toBeNull();
   expect(lane).not.toBeNull();
+  expect(coordinateLayer).toContainElement(lane);
+  expect(coordinateLayer).toContainElement(lineOfScrimmage);
   expect(lane).toHaveStyle({ left: "50%", top: "30%" });
+  expect(lineOfScrimmage).toHaveStyle({ top: "30%" });
 
   const nodes = positionIds.map((positionId) => {
     const node = within(lane as HTMLElement).getByTestId(`position-${positionId}`);
