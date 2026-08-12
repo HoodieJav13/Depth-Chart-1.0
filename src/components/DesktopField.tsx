@@ -1,5 +1,10 @@
 import type { FormationConfig, Player, PositionAssignments } from "../domain/types";
 import { PositionStack } from "./PositionStack";
+import type { PlayerAssignmentSummary } from "../domain/assignmentSummary";
+
+const OFFENSIVE_LINE_IDS = ["off-lt", "off-lg", "off-c", "off-rg", "off-rt"];
+const DEFENSIVE_FRONT_IDS = ["def-le", "def-ldt", "def-rdt", "def-re"];
+const EMPTY_ASSIGNMENT_SUMMARIES = new Map<string, PlayerAssignmentSummary>();
 
 interface DesktopFieldProps {
   formation: FormationConfig;
@@ -8,8 +13,10 @@ interface DesktopFieldProps {
   selectedPlayerId: string | null;
   expandedPositionId: string | null;
   onTogglePosition: (positionId: string) => void;
-  onSelectPlayer: (playerId: string) => void;
   onMovePlayer: (playerId: string, positionId: string, toDepthIndex?: number) => void;
+  onStarterDragStart?: () => void;
+  onStarterDragEnd?: () => void;
+  assignmentSummaries?: Map<string, PlayerAssignmentSummary>;
 }
 
 export const DesktopField = ({
@@ -19,22 +26,23 @@ export const DesktopField = ({
   selectedPlayerId,
   expandedPositionId,
   onTogglePosition,
-  onSelectPlayer,
   onMovePlayer,
-}: DesktopFieldProps) => (
-  <main className="field-shell" aria-label={`${formation.name} field view`}>
-    <div className="football-field">
-      <span className="field-label field-label-left">EAGLES</span>
-      <span className="field-label field-label-right">ELDORADO</span>
-      {formation.positions.map((position) => {
-        const dense = formation.positions.some(
-          (other) =>
-            other.id !== position.id &&
-            Math.abs(other.y - position.y) <= 3 &&
-            Math.abs(other.x - position.x) < 9,
-        );
-
-        return (
+  onStarterDragStart,
+  onStarterDragEnd,
+  assignmentSummaries = EMPTY_ASSIGNMENT_SUMMARIES,
+}: DesktopFieldProps) => {
+  const laneDefinition = formation.unit === "offense"
+    ? { name: "offensive-line", ids: OFFENSIVE_LINE_IDS }
+    : { name: "defensive-front", ids: DEFENSIVE_FRONT_IDS };
+  const laneIds = new Set(laneDefinition.ids);
+  const lanePositions = laneDefinition.ids.flatMap((id) => {
+    const position = formation.positions.find((item) => item.id === id);
+    return position ? [position] : [];
+  });
+  const oppositeUnit = formation.unit === "offense" ? "defense" : "offense";
+  const renderPosition = (position: FormationConfig["positions"][number], inLane = false) => {
+    const starterId = assignments[position.id]?.[0];
+    return (
           <PositionStack
             key={position.id}
             position={position}
@@ -42,13 +50,34 @@ export const DesktopField = ({
             playersById={playersById}
             selectedPlayerId={selectedPlayerId}
             expanded={expandedPositionId === position.id}
-            dense={dense}
+            inLane={inLane}
             onToggle={onTogglePosition}
-            onSelectPlayer={onSelectPlayer}
             onMovePlayer={onMovePlayer}
+            onStarterDragStart={onStarterDragStart}
+            onStarterDragEnd={onStarterDragEnd}
+            oppositePositionLabels={starterId ? assignmentSummaries.get(starterId)?.[oppositeUnit] ?? [] : []}
           />
-        );
-      })}
-    </div>
-  </main>
-);
+    );
+  };
+
+  return (
+    <main className="field-shell" aria-label={`${formation.name} field view`}>
+      <div className="football-field">
+        <span className="field-label field-label-left">EAGLES</span>
+        <span className="field-label field-label-right">ELDORADO</span>
+        {lanePositions.length ? (
+          <div
+            className={`position-lane ${laneDefinition.name}`}
+            data-position-lane={laneDefinition.name}
+            style={{ left: "50%", top: "30%" }}
+          >
+            {lanePositions.map((position) => renderPosition(position, true))}
+          </div>
+        ) : null}
+        {formation.positions
+          .filter((position) => !laneIds.has(position.id))
+          .map((position) => renderPosition(position))}
+      </div>
+    </main>
+  );
+};

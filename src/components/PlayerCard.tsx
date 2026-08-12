@@ -5,7 +5,6 @@ interface PlayerCardProps {
   player: Player;
   selected: boolean;
   depthIndex?: number;
-  compact?: boolean;
   onSelect: (playerId: string) => void;
   onDropBefore?: (playerId: string, depthIndex: number) => void;
 }
@@ -14,7 +13,6 @@ export const PlayerCard = ({
   player,
   selected,
   depthIndex,
-  compact = false,
   onSelect,
   onDropBefore,
 }: PlayerCardProps) => {
@@ -41,7 +39,7 @@ export const PlayerCard = ({
 
   return (
     <button
-      className={`player-card${selected ? " selected" : ""}${compact ? " compact" : ""}`}
+      className={`player-card${selected ? " selected" : ""}`}
       type="button"
       draggable
       aria-pressed={selected}
