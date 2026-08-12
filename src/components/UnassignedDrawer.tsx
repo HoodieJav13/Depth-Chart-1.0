@@ -8,7 +8,11 @@ interface UnassignedDrawerProps {
   players: Player[];
   selectedPlayerId: string | null;
   mobileOpen: boolean;
+  desktopOpen: boolean;
+  desktopVisible?: boolean;
   onMobileOpenChange: (open: boolean) => void;
+  onDesktopOpenChange: (open: boolean) => void;
+  onDesktopDrop: () => void;
   onSelectPlayer: (playerId: string) => void;
   onUnassignPlayer: (playerId: string) => void;
   onRequestAddPlayer: () => void;
@@ -20,7 +24,11 @@ export const UnassignedDrawer = ({
   players,
   selectedPlayerId,
   mobileOpen,
+  desktopOpen,
+  desktopVisible = true,
   onMobileOpenChange,
+  onDesktopOpenChange,
+  onDesktopDrop,
   onSelectPlayer,
   onUnassignPlayer,
   onRequestAddPlayer,
@@ -36,10 +44,13 @@ export const UnassignedDrawer = ({
     );
   }, [players, query]);
 
-  const handleDrop = (event: DragEvent<HTMLElement>) => {
+  const handleDrop = (event: DragEvent<HTMLElement>, desktop = false) => {
     event.preventDefault();
     const playerId = event.dataTransfer.getData("text/player-id");
-    if (playerId) onUnassignPlayer(playerId);
+    if (playerId) {
+      onUnassignPlayer(playerId);
+      if (desktop) onDesktopDrop();
+    }
   };
 
   const moveSelectedToUnassigned = () => {
@@ -63,9 +74,23 @@ export const UnassignedDrawer = ({
 
   return (
     <>
-      <aside className="unassigned-drawer desktop-drawer" aria-label="Unassigned players" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
+      {desktopVisible ? <aside className={`unassigned-drawer desktop-drawer ${desktopOpen ? "expanded" : "collapsed"}`} aria-label="Unassigned players" onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, true)}>
+        {!desktopOpen ? (
+          <button
+            className="roster-rail-handle"
+            type="button"
+            aria-label={`Open unassigned players, ${players.length} ${players.length === 1 ? "player" : "players"}`}
+            onClick={() => onDesktopOpenChange(true)}
+          >
+            <RosterIcon />
+            <span>{players.length}</span>
+            <ChevronIcon className="rail-chevron" />
+          </button>
+        ) : (
+          <>
         <div className="drawer-heading">
           <div><h2>Unassigned Players</h2><span>{players.length}</span></div>
+          <button className="collapse-roster-button" type="button" aria-label="Collapse unassigned players" onClick={() => onDesktopOpenChange(false)}><ChevronIcon /></button>
           <input
             className="roster-search"
             type="search"
@@ -80,7 +105,9 @@ export const UnassignedDrawer = ({
         <div className="unassigned-list">
           {filtered.length ? filtered.map((player) => rosterRow(player)) : <p className="empty-roster-search">No matching players.</p>}
         </div>
-      </aside>
+          </>
+        )}
+      </aside> : null}
 
       <section className={`mobile-unassigned${mobileOpen ? " open" : ""}`} aria-label="Unassigned players" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
         <button className="mobile-unassigned-bar" type="button" aria-expanded={mobileOpen} onClick={moveSelectedToUnassigned}>

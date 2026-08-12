@@ -7,6 +7,7 @@ import { MobileDepthList } from "./components/MobileDepthList";
 import { PlayerEditorDialog } from "./components/PlayerEditorDialog";
 import { PrintControls } from "./components/PrintControls";
 import { PrintDepthChart } from "./components/PrintDepthChart";
+import { PositionDetailPanel } from "./components/PositionDetailPanel";
 import { SelectionBar } from "./components/SelectionBar";
 import { SnapshotManager } from "./components/SnapshotManager";
 import { UndoBar } from "./components/UndoBar";
@@ -21,6 +22,15 @@ import type {
 } from "./domain/types";
 import type { DepthChartStore } from "./store/DepthChartStore";
 import { effectivePlayers } from "./store/stateModel";
+import { buildPlayerAssignmentSummaries } from "./domain/assignmentSummary";
+import {
+  beginFieldDrag,
+  completeFieldDrag,
+  createRightSurfaceState,
+  closePositionDetail,
+  openPositionDetail,
+  setRosterOpen,
+} from "./rightSurfaceState";
 
 interface AppProps {
   store: DepthChartStore;
@@ -40,6 +50,7 @@ export const App = ({
   const [activeFormationId, setActiveFormationId] = useState("offense-base");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [expandedPositionId, setExpandedPositionId] = useState<string | null>(null);
+  const [rightSurface, setRightSurface] = useState(createRightSurfaceState);
   const [mobileUnassignedOpen, setMobileUnassignedOpen] = useState(false);
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -58,6 +69,19 @@ export const App = ({
   const assignedPlayerIds = useMemo(() => new Set(Object.values(assignments).flat()), [assignments]);
   const unassignedPlayers = players.filter((player) => !assignedPlayerIds.has(player.id));
   const selectedPlayer = selectedPlayerId ? playersById.get(selectedPlayerId) ?? null : null;
+  const assignmentSummaries = useMemo(
+    () => buildPlayerAssignmentSummaries(formationConfig.formations, state.assignments),
+    [state.assignments],
+  );
+  const expandedPosition = expandedPositionId
+    ? formation.positions.find((item) => item.id === expandedPositionId) ?? null
+    : null;
+  const expandedPlayers = expandedPosition
+    ? (assignments[expandedPosition.id] ?? []).flatMap((id) => {
+        const player = playersById.get(id);
+        return player ? [player] : [];
+      })
+    : [];
 
   const showError = (error: unknown) => {
     setActionError(error instanceof Error ? error.message : "The action could not be completed.");
@@ -116,6 +140,22 @@ export const App = ({
     setSelectedPlayerId(null);
     setExpandedPositionId(null);
     setMobileUnassignedOpen(false);
+    setRightSurface(createRightSurfaceState());
+  };
+
+  const togglePositionDetail = (positionId: string) => {
+    if (expandedPositionId === positionId && rightSurface.mode === "position") {
+      setExpandedPositionId(null);
+      setRightSurface(closePositionDetail);
+      return;
+    }
+    setExpandedPositionId(positionId);
+    setRightSurface(openPositionDetail);
+  };
+
+  const closePosition = () => {
+    setExpandedPositionId(null);
+    setRightSurface(closePositionDetail);
   };
 
   const print = (title: string, date: string) => {
@@ -145,16 +185,18 @@ export const App = ({
       {isLoading ? (
         <div className="loading-state">Loading shared depth chart…</div>
       ) : (
-        <div className="workspace">
+        <div className={`workspace right-surface-${rightSurface.mode}`}>
           <DesktopField
             formation={formation}
             assignments={assignments}
             playersById={playersById}
             selectedPlayerId={selectedPlayerId}
             expandedPositionId={expandedPositionId}
-            onTogglePosition={(positionId) => setExpandedPositionId((current) => current === positionId ? null : positionId)}
-            onSelectPlayer={selectPlayer}
+            onTogglePosition={togglePositionDetail}
             onMovePlayer={(playerId, positionId, toDepthIndex) => void movePlayer(playerId, positionId, toDepthIndex)}
+            onStarterDragStart={() => setRightSurface(beginFieldDrag)}
+            onStarterDragEnd={() => setRightSurface((current) => completeFieldDrag(current, false))}
+            assignmentSummaries={assignmentSummaries}
           />
           <MobileDepthList
             key={formation.id}
@@ -169,13 +211,38 @@ export const App = ({
             players={unassignedPlayers}
             selectedPlayerId={selectedPlayerId}
             mobileOpen={mobileUnassignedOpen}
+            desktopOpen={rightSurface.mode === "roster"}
+            desktopVisible={rightSurface.mode !== "position"}
             onMobileOpenChange={setMobileUnassignedOpen}
+            onDesktopOpenChange={(open) => setRightSurface((current) => setRosterOpen(current, open))}
+            onDesktopDrop={() => setRightSurface((current) => completeFieldDrag(current, true))}
             onSelectPlayer={selectPlayer}
             onUnassignPlayer={(playerId) => void unassignPlayer(playerId)}
             onRequestAddPlayer={() => setAddPlayerOpen(true)}
             onEditPlayer={setEditingPlayer}
             onArchivePlayer={(player) => void archivePlayer(player)}
           />
+          {rightSurface.mode === "position" && expandedPosition ? (
+            <PositionDetailPanel
+              position={expandedPosition}
+              players={expandedPlayers}
+              selectedPlayerId={selectedPlayerId}
+              onClose={closePosition}
+              onSelectPlayer={selectPlayer}
+              onMovePlayer={(playerId, positionId, toDepthIndex) => void movePlayer(playerId, positionId, toDepthIndex)}
+              onUnassignPlayer={(playerId) => void unassignPlayer(playerId)}
+              onEditPlayer={setEditingPlayer}
+              onArchivePlayer={(player) => void archivePlayer(player)}
+              assignmentSummary={(playerId) => {
+                const summary = assignmentSummaries.get(playerId);
+                if (!summary) return [];
+                return [
+                  ...(summary.offense.length ? [`Offense: ${summary.offense.join(", ")}`] : []),
+                  ...(summary.defense.length ? [`Defense: ${summary.defense.join(", ")}`] : []),
+                ];
+              }}
+            />
+          ) : null}
         </div>
       )}
 
