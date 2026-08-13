@@ -72,6 +72,14 @@ export interface ArchivePlayerInput {
 export interface MoveAssignmentInput {
   playerId: string;
   formationId: string;
+  fromPositionId?: string;
+  toPositionId: string;
+  toDepthIndex?: number;
+}
+
+export interface CrossListAssignmentInput {
+  playerId: string;
+  formationId: string;
   toPositionId: string;
   toDepthIndex?: number;
 }
@@ -86,6 +94,7 @@ export interface ReorderDepthInput {
 export interface UnassignPlayerInput {
   playerId: string;
   formationId: string;
+  fromPositionId: string;
 }
 
 export type StorePhase = "idle" | "loading" | "saving" | "saved" | "offline" | "error";

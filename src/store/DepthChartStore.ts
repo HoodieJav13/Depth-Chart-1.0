@@ -1,6 +1,7 @@
 import type {
   AddPlayerInput,
   ArchivePlayerInput,
+  CrossListAssignmentInput,
   DepthChartSnapshot,
   DepthChartState,
   MigrationResult,
@@ -21,6 +22,7 @@ export interface DepthChartStore {
   updatePlayer(input: UpdatePlayerInput): Promise<void>;
   archivePlayer(input: ArchivePlayerInput): Promise<void>;
   moveAssignment(input: MoveAssignmentInput): Promise<void>;
+  crossListAssignment(input: CrossListAssignmentInput): Promise<void>;
   reorderDepth(input: ReorderDepthInput): Promise<void>;
   unassignPlayer(input: UnassignPlayerInput): Promise<void>;
   undoLastChange(): Promise<boolean>;

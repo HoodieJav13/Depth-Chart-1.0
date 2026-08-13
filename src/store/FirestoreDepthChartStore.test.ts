@@ -7,6 +7,7 @@ import { createEmptyState } from "./stateModel";
 class FakeBackend implements SharedChartBackend {
   current: DepthChartState | null = null;
   snapshots: DepthChartSnapshot[] = [];
+  compareAndSetCalls = 0;
   private listener: ((state: unknown | null) => void) | null = null;
 
   subscribeCurrent(listener: (state: unknown | null) => void): () => void {
@@ -24,6 +25,7 @@ class FakeBackend implements SharedChartBackend {
     expectedRevision: number | null,
     state: DepthChartState,
   ): Promise<boolean> {
+    this.compareAndSetCalls += 1;
     if (this.current === null) {
       if (expectedRevision !== null) return false;
     } else if (this.current.revision !== expectedRevision) {
@@ -110,6 +112,7 @@ describe("FirestoreDepthChartStore", () => {
     await store.unassignPlayer({
       playerId: "p01",
       formationId: "offense-base",
+      fromPositionId: "off-q",
     });
     await store.restoreSnapshot(snapshot.id);
     expect(
@@ -153,5 +156,85 @@ describe("FirestoreDepthChartStore", () => {
     expect(backend.current.assignments["offense-base"]["off-rb"]).toEqual([
       "p02",
     ]);
+  });
+
+  it("rejects a duplicate defensive starter before attempting persistence", async () => {
+    const backend = new FakeBackend();
+    backend.current = createEmptyState();
+    const store = new FirestoreDepthChartStore(backend, coach);
+    await store.loadLineup();
+    await store.moveAssignment({
+      playerId: "p01",
+      formationId: "defense-base",
+      toPositionId: "def-bandit",
+    });
+    const writesAfterStarter = backend.compareAndSetCalls;
+
+    await expect(store.crossListAssignment({
+      playerId: "p01",
+      formationId: "defense-base",
+      toPositionId: "def-alpha",
+      toDepthIndex: 0,
+    })).rejects.toThrow("Reid Alcaraz is already starting at B.");
+
+    expect(backend.compareAndSetCalls).toBe(writesAfterStarter);
+    expect(backend.current.assignments["defense-base"]["def-alpha"]).toEqual([]);
+  });
+
+  it("rejects a stale source occurrence before attempting persistence", async () => {
+    const backend = new FakeBackend();
+    backend.current = createEmptyState();
+    backend.current.assignments["defense-base"]["def-bandit"] = ["p01"];
+    const store = new FirestoreDepthChartStore(backend, coach);
+    await store.loadLineup();
+    const writesBeforeStaleMove = backend.compareAndSetCalls;
+
+    await expect(store.moveAssignment({
+      playerId: "p01",
+      formationId: "defense-base",
+      fromPositionId: "def-mike",
+      toPositionId: "def-fs",
+    })).rejects.toThrow("no longer assigned at M");
+
+    expect(backend.compareAndSetCalls).toBe(writesBeforeStaleMove);
+    expect(backend.current.assignments["defense-base"]["def-bandit"]).toEqual(["p01"]);
+    expect(backend.current.assignments["defense-base"]["def-fs"]).toEqual([]);
+  });
+
+  it("rejects placement when another coach archived the selected player without writing", async () => {
+    const backend = new FakeBackend();
+    backend.current = createEmptyState();
+    backend.current.archivedPlayerIds = ["p01"];
+    const store = new FirestoreDepthChartStore(backend, coach);
+    await store.loadLineup();
+    const writesBeforeMove = backend.compareAndSetCalls;
+
+    await expect(store.moveAssignment({
+      playerId: "p01",
+      formationId: "defense-base",
+      toPositionId: "def-fs",
+    })).rejects.toThrow("Reid Alcaraz is no longer available");
+
+    expect(backend.compareAndSetCalls).toBe(writesBeforeMove);
+    expect(backend.current.revision).toBe(0);
+  });
+
+  it("rejects cross-listing when another coach archived the selected player without writing", async () => {
+    const backend = new FakeBackend();
+    backend.current = createEmptyState();
+    backend.current.archivedPlayerIds = ["p01"];
+    const store = new FirestoreDepthChartStore(backend, coach);
+    await store.loadLineup();
+    const writesBeforeCrossList = backend.compareAndSetCalls;
+
+    await expect(store.crossListAssignment({
+      playerId: "p01",
+      formationId: "defense-base",
+      toPositionId: "def-fs",
+      toDepthIndex: 1,
+    })).rejects.toThrow("Reid Alcaraz is no longer available");
+
+    expect(backend.compareAndSetCalls).toBe(writesBeforeCrossList);
+    expect(backend.current.revision).toBe(0);
   });
 });

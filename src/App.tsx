@@ -40,6 +40,11 @@ interface AppProps {
   migrationResult?: MigrationResult | null;
 }
 
+interface SelectedAssignment {
+  playerId: string;
+  fromPositionId?: string;
+}
+
 export const App = ({
   store,
   coachDisplayName,
@@ -48,7 +53,7 @@ export const App = ({
   migrationResult = null,
 }: AppProps) => {
   const [activeFormationId, setActiveFormationId] = useState("offense-base");
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<SelectedAssignment | null>(null);
   const [expandedPositionId, setExpandedPositionId] = useState<string | null>(null);
   const [rightSurface, setRightSurface] = useState(createRightSurfaceState);
   const [mobileUnassignedOpen, setMobileUnassignedOpen] = useState(false);
@@ -68,6 +73,7 @@ export const App = ({
   const playersById = useMemo(() => new Map(players.map((player) => [player.id, player])), [players]);
   const assignedPlayerIds = useMemo(() => new Set(Object.values(assignments).flat()), [assignments]);
   const unassignedPlayers = players.filter((player) => !assignedPlayerIds.has(player.id));
+  const selectedPlayerId = selectedAssignment?.playerId ?? null;
   const selectedPlayer = selectedPlayerId ? playersById.get(selectedPlayerId) ?? null : null;
   const assignmentSummaries = useMemo(
     () => buildPlayerAssignmentSummaries(formationConfig.formations, state.assignments),
@@ -87,29 +93,62 @@ export const App = ({
     setActionError(error instanceof Error ? error.message : "The action could not be completed.");
   };
 
-  const selectPlayer = (playerId: string) => {
+  const selectPlayer = (playerId: string, fromPositionId?: string) => {
     setMoveConfirmation(null);
-    setSelectedPlayerId((current) => (current === playerId ? null : playerId));
+    setSelectedAssignment((current) =>
+      current?.playerId === playerId && current.fromPositionId === fromPositionId
+        ? null
+        : { playerId, fromPositionId },
+    );
   };
 
-  const movePlayer = async (playerId: string, positionId: string, toDepthIndex?: number) => {
+  const movePlayer = async (
+    playerId: string,
+    positionId: string,
+    toDepthIndex?: number,
+    fromPositionId?: string,
+  ) => {
     setActionError(null);
     try {
-      await store.moveAssignment({ playerId, formationId: formation.id, toPositionId: positionId, toDepthIndex });
+      await store.moveAssignment({
+        playerId,
+        formationId: formation.id,
+        fromPositionId,
+        toPositionId: positionId,
+        toDepthIndex,
+      });
       const player = playersById.get(playerId);
       const position = formation.positions.find((item) => item.id === positionId);
       setMoveConfirmation(`${player?.name ?? "Player"} moved to ${position?.label ?? "position"}`);
-      setSelectedPlayerId(null);
+      setSelectedAssignment(null);
       window.setTimeout(() => setMoveConfirmation(null), 1800);
     } catch (error) {
       showError(error);
     }
   };
 
-  const unassignPlayer = async (playerId: string) => {
+  const crossListPlayer = async (playerId: string, positionId: string, toDepthIndex: number) => {
+    setActionError(null);
     try {
-      await store.unassignPlayer({ playerId, formationId: formation.id });
-      setSelectedPlayerId(null);
+      await store.crossListAssignment({
+        playerId,
+        formationId: formation.id,
+        toPositionId: positionId,
+        toDepthIndex,
+      });
+      const player = playersById.get(playerId);
+      const position = formation.positions.find((item) => item.id === positionId);
+      setMoveConfirmation(`${player?.name ?? "Player"} added at ${position?.label ?? "position"}`);
+      window.setTimeout(() => setMoveConfirmation(null), 1800);
+    } catch (error) {
+      showError(error);
+    }
+  };
+
+  const unassignPlayer = async (playerId: string, fromPositionId: string) => {
+    try {
+      await store.unassignPlayer({ playerId, formationId: formation.id, fromPositionId });
+      setSelectedAssignment(null);
     } catch (error) {
       showError(error);
     }
@@ -129,7 +168,7 @@ export const App = ({
     if (!window.confirm(`Archive ${player.name}? They will be removed from all positions.`)) return;
     try {
       await store.archivePlayer({ playerId: player.id });
-      if (selectedPlayerId === player.id) setSelectedPlayerId(null);
+      if (selectedPlayerId === player.id) setSelectedAssignment(null);
     } catch (error) {
       showError(error);
     }
@@ -137,7 +176,7 @@ export const App = ({
 
   const changeFormation = (formationId: string) => {
     setActiveFormationId(formationId);
-    setSelectedPlayerId(null);
+    setSelectedAssignment(null);
     setExpandedPositionId(null);
     setMobileUnassignedOpen(false);
     setRightSurface(createRightSurfaceState());
@@ -191,9 +230,10 @@ export const App = ({
             assignments={assignments}
             playersById={playersById}
             selectedPlayerId={selectedPlayerId}
+            selectedFromPositionId={selectedAssignment?.fromPositionId}
             expandedPositionId={expandedPositionId}
             onTogglePosition={togglePositionDetail}
-            onMovePlayer={(playerId, positionId, toDepthIndex) => void movePlayer(playerId, positionId, toDepthIndex)}
+            onMovePlayer={(playerId, positionId, toDepthIndex, fromPositionId) => void movePlayer(playerId, positionId, toDepthIndex, fromPositionId)}
             onStarterDragStart={() => setRightSurface(beginFieldDrag)}
             onStarterDragEnd={() => setRightSurface((current) => completeFieldDrag(current, false))}
             assignmentSummaries={assignmentSummaries}
@@ -204,12 +244,15 @@ export const App = ({
             assignments={assignments}
             playersById={playersById}
             selectedPlayerId={selectedPlayerId}
+            selectedFromPositionId={selectedAssignment?.fromPositionId}
             onSelectPlayer={selectPlayer}
-            onMovePlayer={(playerId, positionId, toDepthIndex) => void movePlayer(playerId, positionId, toDepthIndex)}
+            onMovePlayer={(playerId, positionId, toDepthIndex, fromPositionId) => void movePlayer(playerId, positionId, toDepthIndex, fromPositionId)}
+            onCrossListPlayer={(playerId, positionId, toDepthIndex) => void crossListPlayer(playerId, positionId, toDepthIndex)}
           />
           <UnassignedDrawer
             players={unassignedPlayers}
             selectedPlayerId={selectedPlayerId}
+            selectedFromPositionId={selectedAssignment?.fromPositionId}
             mobileOpen={mobileUnassignedOpen}
             desktopOpen={rightSurface.mode === "roster"}
             desktopVisible={rightSurface.mode !== "position"}
@@ -217,20 +260,23 @@ export const App = ({
             onDesktopOpenChange={(open) => setRightSurface((current) => setRosterOpen(current, open))}
             onDesktopDrop={() => setRightSurface((current) => completeFieldDrag(current, true))}
             onSelectPlayer={selectPlayer}
-            onUnassignPlayer={(playerId) => void unassignPlayer(playerId)}
+            onUnassignPlayer={(playerId, fromPositionId) => void unassignPlayer(playerId, fromPositionId)}
             onRequestAddPlayer={() => setAddPlayerOpen(true)}
             onEditPlayer={setEditingPlayer}
             onArchivePlayer={(player) => void archivePlayer(player)}
           />
           {rightSurface.mode === "position" && expandedPosition ? (
             <PositionDetailPanel
+              formation={formation}
               position={expandedPosition}
+              assignments={assignments}
               players={expandedPlayers}
               selectedPlayerId={selectedPlayerId}
               onClose={closePosition}
               onSelectPlayer={selectPlayer}
-              onMovePlayer={(playerId, positionId, toDepthIndex) => void movePlayer(playerId, positionId, toDepthIndex)}
-              onUnassignPlayer={(playerId) => void unassignPlayer(playerId)}
+              onMovePlayer={(playerId, positionId, toDepthIndex, fromPositionId) => void movePlayer(playerId, positionId, toDepthIndex, fromPositionId)}
+              onUnassignPlayer={(playerId, fromPositionId) => void unassignPlayer(playerId, fromPositionId)}
+              onCrossListPlayer={(playerId, positionId, toDepthIndex) => void crossListPlayer(playerId, positionId, toDepthIndex)}
               onEditPlayer={setEditingPlayer}
               onArchivePlayer={(player) => void archivePlayer(player)}
               assignmentSummary={(playerId) => {
@@ -246,7 +292,7 @@ export const App = ({
         </div>
       )}
 
-      <SelectionBar player={selectedPlayer} confirmation={moveConfirmation} onEdit={setEditingPlayer} onCancel={() => setSelectedPlayerId(null)} />
+      <SelectionBar player={selectedPlayer} confirmation={moveConfirmation} onEdit={setEditingPlayer} onCancel={() => setSelectedAssignment(null)} />
       <UndoBar canUndo={status.canUndo} onUndo={() => void store.undoLastChange().catch(showError)} />
       <PrintDepthChart title={printTitle} date={printDate} formation={formation} assignments={assignments} playersById={playersById} />
 

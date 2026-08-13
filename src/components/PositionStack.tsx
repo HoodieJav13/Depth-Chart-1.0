@@ -6,10 +6,11 @@ interface PositionStackProps {
   playerIds: string[];
   playersById: Map<string, Player>;
   selectedPlayerId: string | null;
+  selectedFromPositionId?: string;
   expanded: boolean;
   inLane?: boolean;
   onToggle: (positionId: string) => void;
-  onMovePlayer: (playerId: string, positionId: string, toDepthIndex?: number) => void;
+  onMovePlayer: (playerId: string, positionId: string, toDepthIndex?: number, fromPositionId?: string) => void;
   onStarterDragStart?: () => void;
   onStarterDragEnd?: () => void;
   oppositePositionLabels?: string[];
@@ -20,6 +21,7 @@ export const PositionStack = ({
   playerIds,
   playersById,
   selectedPlayerId,
+  selectedFromPositionId,
   expanded,
   inLane = false,
   onToggle,
@@ -34,7 +36,7 @@ export const PositionStack = ({
     return player ? [player] : [];
   });
   const isSelectedSource = Boolean(
-    selectedPlayerId && playerIds.includes(selectedPlayerId),
+    selectedPlayerId && selectedFromPositionId === position.id,
   );
   const placementState = isSelectedSource
     ? "source"
@@ -45,7 +47,7 @@ export const PositionStack = ({
   const handlePositionClick = () => {
     if (suppressClickRef.current) return;
     if (selectedPlayerId) {
-      onMovePlayer(selectedPlayerId, position.id);
+      onMovePlayer(selectedPlayerId, position.id, undefined, selectedFromPositionId);
       return;
     }
     onToggle(position.id);
@@ -57,6 +59,7 @@ export const PositionStack = ({
     suppressClickRef.current = true;
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/player-id", starter.id);
+    event.dataTransfer.setData("text/from-position-id", position.id);
     onStarterDragStart?.();
   };
 
@@ -70,7 +73,8 @@ export const PositionStack = ({
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const playerId = event.dataTransfer.getData("text/player-id");
-    if (playerId) onMovePlayer(playerId, position.id);
+    const fromPositionId = event.dataTransfer.getData("text/from-position-id") || undefined;
+    if (playerId) onMovePlayer(playerId, position.id, undefined, fromPositionId);
   };
 
   return (

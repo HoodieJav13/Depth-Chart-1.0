@@ -5,14 +5,16 @@ interface PlayerCardProps {
   player: Player;
   selected: boolean;
   depthIndex?: number;
-  onSelect: (playerId: string) => void;
-  onDropBefore?: (playerId: string, depthIndex: number) => void;
+  sourcePositionId?: string;
+  onSelect: (playerId: string, sourcePositionId?: string) => void;
+  onDropBefore?: (playerId: string, depthIndex: number, fromPositionId?: string) => void;
 }
 
 export const PlayerCard = ({
   player,
   selected,
   depthIndex,
+  sourcePositionId,
   onSelect,
   onDropBefore,
 }: PlayerCardProps) => {
@@ -20,13 +22,16 @@ export const PlayerCard = ({
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    onSelect(player.id);
+    onSelect(player.id, sourcePositionId);
   };
 
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/player-id", player.id);
+    if (sourcePositionId) {
+      event.dataTransfer.setData("text/from-position-id", sourcePositionId);
+    }
   };
 
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
@@ -34,7 +39,8 @@ export const PlayerCard = ({
     event.preventDefault();
     event.stopPropagation();
     const playerId = event.dataTransfer.getData("text/player-id");
-    if (playerId) onDropBefore(playerId, depthIndex);
+    const fromPositionId = event.dataTransfer.getData("text/from-position-id") || undefined;
+    if (playerId) onDropBefore(playerId, depthIndex, fromPositionId);
   };
 
   return (

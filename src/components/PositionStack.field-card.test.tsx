@@ -20,9 +20,11 @@ const players = new Map<string, Player>([
 const renderPosition = ({
   playerIds = ["p01", "p02"],
   selectedPlayerId = null,
+  selectedFromPositionId,
 }: {
   playerIds?: string[];
   selectedPlayerId?: string | null;
+  selectedFromPositionId?: string;
 } = {}) => {
   const onToggle = vi.fn();
   const onMovePlayer = vi.fn();
@@ -32,6 +34,7 @@ const renderPosition = ({
       playerIds={playerIds}
       playersById={players}
       selectedPlayerId={selectedPlayerId}
+      selectedFromPositionId={selectedFromPositionId}
       expanded={false}
       onToggle={onToggle}
       onMovePlayer={onMovePlayer}
@@ -76,7 +79,7 @@ describe("PositionStack field card", () => {
   });
 
   it("distinguishes the selected source card from other valid placement targets", () => {
-    const source = renderPosition({ selectedPlayerId: "p01" });
+    const source = renderPosition({ selectedPlayerId: "p01", selectedFromPositionId: "off-q" });
     const sourceCard = source.getByRole("button", { name: "Q depth chart, 2 players" });
     expect(sourceCard).toHaveClass("selected-source");
     expect(sourceCard).not.toHaveClass("placement-target");
@@ -84,7 +87,7 @@ describe("PositionStack field card", () => {
     expect(sourceCard).toHaveAttribute("aria-current", "true");
     source.unmount();
 
-    const target = renderPosition({ selectedPlayerId: "p03" });
+    const target = renderPosition({ selectedPlayerId: "p01", selectedFromPositionId: "off-t" });
     const targetCard = target.getByRole("button", { name: "Q depth chart, 2 players" });
     expect(targetCard).toHaveClass("placement-target");
     expect(targetCard).not.toHaveClass("selected-source");
@@ -118,13 +121,13 @@ describe("PositionStack field card", () => {
 
   it("places the selected player without opening detail", () => {
     const { getByRole, onToggle, onMovePlayer } =
-      renderPosition({ selectedPlayerId: "p02" });
+      renderPosition({ selectedPlayerId: "p02", selectedFromPositionId: "off-t" });
 
     fireEvent.click(
       getByRole("button", { name: "Q depth chart, 2 players" }),
     );
 
-    expect(onMovePlayer).toHaveBeenCalledWith("p02", "off-q");
+    expect(onMovePlayer).toHaveBeenCalledWith("p02", "off-q", undefined, "off-t");
     expect(onToggle).not.toHaveBeenCalled();
   });
 
@@ -146,6 +149,7 @@ describe("PositionStack field card", () => {
 
     expect(dataTransfer.effectAllowed).toBe("move");
     expect(dataTransfer.setData).toHaveBeenCalledWith("text/player-id", "p01");
+    expect(dataTransfer.setData).toHaveBeenCalledWith("text/from-position-id", "off-q");
     expect(onToggle).not.toHaveBeenCalled();
 
     vi.runAllTimers();
