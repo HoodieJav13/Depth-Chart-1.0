@@ -2,6 +2,7 @@ import { roster } from "../domain/config";
 import type {
   AddPlayerInput,
   ArchivePlayerInput,
+  CrossListAssignmentInput,
   DepthChartSnapshot,
   DepthChartState,
   MigrationResult,
@@ -27,6 +28,12 @@ import {
   normalizeState,
   removePlayerFromAssignments,
 } from "./stateModel";
+import {
+  crossListAssignmentInState,
+  moveAssignmentInState,
+  unassignOccurrenceInState,
+  unavailablePlayerError,
+} from "./assignmentOperations";
 
 interface CoachIdentity {
   phoneNumber: string;
@@ -162,21 +169,18 @@ export class FirestoreDepthChartStore implements DepthChartStore {
   async moveAssignment(input: MoveAssignmentInput): Promise<void> {
     await this.mutate("Move player", (next) => {
       if (!effectivePlayers(next).some((player) => player.id === input.playerId)) {
-        return;
+        throw unavailablePlayerError(next, input.playerId);
       }
-      const formation = next.assignments[input.formationId];
-      if (!formation || !(input.toPositionId in formation)) return;
-      for (const positionId of Object.keys(formation)) {
-        formation[positionId] = formation[positionId].filter(
-          (id) => id !== input.playerId,
-        );
+      moveAssignmentInState(next, input);
+    });
+  }
+
+  async crossListAssignment(input: CrossListAssignmentInput): Promise<void> {
+    await this.mutate("Cross-list player", (next) => {
+      if (!effectivePlayers(next).some((player) => player.id === input.playerId)) {
+        throw unavailablePlayerError(next, input.playerId);
       }
-      const target = formation[input.toPositionId];
-      const insertAt = Math.max(
-        0,
-        Math.min(input.toDepthIndex ?? target.length, target.length),
-      );
-      target.splice(insertAt, 0, input.playerId);
+      crossListAssignmentInState(next, input);
     });
   }
 
@@ -184,6 +188,7 @@ export class FirestoreDepthChartStore implements DepthChartStore {
     await this.moveAssignment({
       playerId: input.playerId,
       formationId: input.formationId,
+      fromPositionId: input.positionId,
       toPositionId: input.positionId,
       toDepthIndex: input.toDepthIndex,
     });
@@ -191,13 +196,7 @@ export class FirestoreDepthChartStore implements DepthChartStore {
 
   async unassignPlayer(input: UnassignPlayerInput): Promise<void> {
     await this.mutate("Unassign player", (next) => {
-      const formation = next.assignments[input.formationId];
-      if (!formation) return;
-      for (const positionId of Object.keys(formation)) {
-        formation[positionId] = formation[positionId].filter(
-          (id) => id !== input.playerId,
-        );
-      }
+      unassignOccurrenceInState(next, input);
     });
   }
 
