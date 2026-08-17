@@ -80,11 +80,13 @@ describe("UnassignedDrawer desktop rail", () => {
       />,
     );
     const desktop = view.container.querySelector(".desktop-drawer") as HTMLElement;
-    const dataTransfer = { getData: vi.fn(() => "p01") };
+    const dataTransfer = {
+      getData: vi.fn((type: string) => type === "text/player-id" ? "p01" : "off-q"),
+    };
 
     fireEvent.drop(desktop, { dataTransfer });
 
-    expect(onUnassignPlayer).toHaveBeenCalledWith("p01");
+    expect(onUnassignPlayer).toHaveBeenCalledWith("p01", "off-q");
     expect(onDesktopDrop).toHaveBeenCalled();
   });
 });

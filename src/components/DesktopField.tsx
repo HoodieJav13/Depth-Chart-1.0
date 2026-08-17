@@ -77,9 +77,10 @@ interface DesktopFieldProps {
   assignments: PositionAssignments;
   playersById: Map<string, Player>;
   selectedPlayerId: string | null;
+  selectedFromPositionId?: string;
   expandedPositionId: string | null;
   onTogglePosition: (positionId: string) => void;
-  onMovePlayer: (playerId: string, positionId: string, toDepthIndex?: number) => void;
+  onMovePlayer: (playerId: string, positionId: string, toDepthIndex?: number, fromPositionId?: string) => void;
   onStarterDragStart?: () => void;
   onStarterDragEnd?: () => void;
   assignmentSummaries?: Map<string, PlayerAssignmentSummary>;
@@ -90,6 +91,7 @@ export const DesktopField = ({
   assignments,
   playersById,
   selectedPlayerId,
+  selectedFromPositionId,
   expandedPositionId,
   onTogglePosition,
   onMovePlayer,
@@ -115,6 +117,7 @@ export const DesktopField = ({
         playerIds={assignments[position.id] ?? []}
         playersById={playersById}
         selectedPlayerId={selectedPlayerId}
+        selectedFromPositionId={selectedFromPositionId}
         expanded={expandedPositionId === position.id}
         compact={compact}
         onToggle={onTogglePosition}

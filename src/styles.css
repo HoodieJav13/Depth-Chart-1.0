@@ -695,7 +695,7 @@ button:focus-visible {
 .position-player-actions {
   display: grid;
   grid-column: 2;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
 
@@ -708,6 +708,56 @@ button:focus-visible {
   cursor: pointer;
   font-size: 0.61rem;
   font-weight: 750;
+}
+
+.position-player-actions .cross-list-controls {
+  grid-column: 1 / -1;
+}
+
+.cross-list-controls {
+  display: grid;
+  grid-column: 2;
+  grid-template-columns: minmax(0, 1fr) minmax(76px, 0.6fr);
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #40515b;
+  border-radius: 5px;
+  background: #0c171e;
+}
+
+.cross-list-controls label {
+  display: grid;
+  gap: 3px;
+}
+
+.cross-list-controls label > span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cross-list-controls select,
+.cross-list-controls button {
+  min-width: 0;
+  min-height: 32px;
+  border: 1px solid #40515b;
+  border-radius: 4px;
+  background: #14242e;
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.cross-list-controls button {
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.cross-list-controls button[type="submit"] {
+  border-color: #a65d2b;
+  background: #3a2a21;
+  color: #ffc79f;
 }
 
 .position-detail-empty {
@@ -1205,6 +1255,32 @@ button:focus-visible {
     min-height: 43px;
     padding: 10px 13px;
     font-size: 0.93rem;
+  }
+
+  .mobile-assigned-player {
+    display: grid;
+    gap: 5px;
+  }
+
+  .mobile-cross-list-action {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobile-cross-list-action > button {
+    min-height: 32px;
+    border: 1px solid #3d4f59;
+    border-radius: 4px;
+    background: #14242e;
+    color: #bdc8cd;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 750;
+  }
+
+  .mobile-cross-list-action .cross-list-controls {
+    grid-column: 1;
+    margin-top: 5px;
   }
 
   .mobile-empty-target {

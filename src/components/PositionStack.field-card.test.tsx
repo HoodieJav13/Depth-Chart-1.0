@@ -25,11 +25,13 @@ const renderPosition = ({
   selectedPlayerId = null,
   compact = false,
   positionConfig = position,
+  selectedFromPositionId,
 }: {
   playerIds?: string[];
   selectedPlayerId?: string | null;
   compact?: boolean;
   positionConfig?: PositionConfig;
+  selectedFromPositionId?: string;
 } = {}) => {
   const onToggle = vi.fn();
   const onMovePlayer = vi.fn();
@@ -39,6 +41,7 @@ const renderPosition = ({
       playerIds={playerIds}
       playersById={players}
       selectedPlayerId={selectedPlayerId}
+      selectedFromPositionId={selectedFromPositionId}
       expanded={false}
       compact={compact}
       onToggle={onToggle}
@@ -175,7 +178,7 @@ describe("position column", () => {
   });
 
   it("distinguishes the selected source card from other valid placement targets", () => {
-    const source = renderPosition({ selectedPlayerId: "p01" });
+    const source = renderPosition({ selectedPlayerId: "p01", selectedFromPositionId: "off-q" });
     const sourceCard = starterCard(source.getByRole, 2);
     expect(sourceCard).toHaveClass("selected-source");
     expect(sourceCard).not.toHaveClass("placement-target");
@@ -183,7 +186,7 @@ describe("position column", () => {
     expect(sourceCard).toHaveAttribute("aria-current", "true");
     source.unmount();
 
-    const target = renderPosition({ selectedPlayerId: "p03" });
+    const target = renderPosition({ selectedPlayerId: "p01", selectedFromPositionId: "off-t" });
     const targetCard = starterCard(target.getByRole, 2);
     expect(targetCard).toHaveClass("placement-target");
     expect(targetCard).not.toHaveClass("selected-source");
@@ -202,12 +205,13 @@ describe("position column", () => {
 
   it("places the selected player without opening detail", () => {
     const { getByRole, onToggle, onMovePlayer } = renderPosition({
-      selectedPlayerId: "p05",
+      selectedPlayerId: "p02",
+      selectedFromPositionId: "off-t",
     });
 
     fireEvent.click(starterCard(getByRole, 2));
 
-    expect(onMovePlayer).toHaveBeenCalledWith("p05", "off-q");
+    expect(onMovePlayer).toHaveBeenCalledWith("p02", "off-q", undefined, "off-t");
     expect(onToggle).not.toHaveBeenCalled();
   });
 
@@ -243,6 +247,7 @@ describe("position column", () => {
 
     expect(dataTransfer.effectAllowed).toBe("move");
     expect(dataTransfer.setData).toHaveBeenCalledWith("text/player-id", "p01");
+    expect(dataTransfer.setData).toHaveBeenCalledWith("text/from-position-id", "off-q");
     expect(onToggle).not.toHaveBeenCalled();
 
     vi.runAllTimers();

@@ -2,6 +2,7 @@ import { roster } from "../domain/config";
 import type {
   AddPlayerInput,
   ArchivePlayerInput,
+  CrossListAssignmentInput,
   DepthChartSnapshot,
   DepthChartState,
   MigrationResult,
@@ -25,6 +26,12 @@ import {
   normalizeState,
   removePlayerFromAssignments,
 } from "./stateModel";
+import {
+  crossListAssignmentInState,
+  moveAssignmentInState,
+  unassignOccurrenceInState,
+  unavailablePlayerError,
+} from "./assignmentOperations";
 
 const STORAGE_KEY = "eldorado-depth-chart.phase1.v1";
 const SNAPSHOT_KEY = "eldorado-depth-chart.snapshots.v1";
@@ -104,18 +111,21 @@ export class LocalStorageDepthChartStore implements DepthChartStore {
     this.commit(next);
   }
 
-  async moveAssignment({ playerId, formationId, toPositionId, toDepthIndex }: MoveAssignmentInput): Promise<void> {
-    if (!effectivePlayers(this.state).some((player) => player.id === playerId)) return;
-    const formation = this.state.assignments[formationId];
-    if (!formation || !(toPositionId in formation)) return;
-    const next = cloneState(this.state);
-    const nextFormation = next.assignments[formationId];
-    for (const positionId of Object.keys(nextFormation)) {
-      nextFormation[positionId] = nextFormation[positionId].filter((id) => id !== playerId);
+  async moveAssignment(input: MoveAssignmentInput): Promise<void> {
+    if (!effectivePlayers(this.state).some((player) => player.id === input.playerId)) {
+      throw unavailablePlayerError(this.state, input.playerId);
     }
-    const target = nextFormation[toPositionId];
-    const insertAt = Math.max(0, Math.min(toDepthIndex ?? target.length, target.length));
-    target.splice(insertAt, 0, playerId);
+    const next = cloneState(this.state);
+    moveAssignmentInState(next, input);
+    this.commit(next);
+  }
+
+  async crossListAssignment(input: CrossListAssignmentInput): Promise<void> {
+    if (!effectivePlayers(this.state).some((player) => player.id === input.playerId)) {
+      throw unavailablePlayerError(this.state, input.playerId);
+    }
+    const next = cloneState(this.state);
+    crossListAssignmentInState(next, input);
     this.commit(next);
   }
 
@@ -123,19 +133,15 @@ export class LocalStorageDepthChartStore implements DepthChartStore {
     await this.moveAssignment({
       playerId: input.playerId,
       formationId: input.formationId,
+      fromPositionId: input.positionId,
       toPositionId: input.positionId,
       toDepthIndex: input.toDepthIndex,
     });
   }
 
-  async unassignPlayer({ playerId, formationId }: UnassignPlayerInput): Promise<void> {
-    if (!this.state.assignments[formationId]) return;
+  async unassignPlayer(input: UnassignPlayerInput): Promise<void> {
     const next = cloneState(this.state);
-    for (const positionId of Object.keys(next.assignments[formationId])) {
-      next.assignments[formationId][positionId] = next.assignments[formationId][positionId].filter(
-        (id) => id !== playerId,
-      );
-    }
+    unassignOccurrenceInState(next, input);
     this.commit(next);
   }
 

@@ -7,6 +7,7 @@ import { PlayerCard } from "./PlayerCard";
 interface UnassignedDrawerProps {
   players: Player[];
   selectedPlayerId: string | null;
+  selectedFromPositionId?: string;
   mobileOpen: boolean;
   desktopOpen: boolean;
   desktopVisible?: boolean;
@@ -14,7 +15,7 @@ interface UnassignedDrawerProps {
   onDesktopOpenChange: (open: boolean) => void;
   onDesktopDrop: () => void;
   onSelectPlayer: (playerId: string) => void;
-  onUnassignPlayer: (playerId: string) => void;
+  onUnassignPlayer: (playerId: string, fromPositionId: string) => void;
   onRequestAddPlayer: () => void;
   onEditPlayer: (player: Player) => void;
   onArchivePlayer: (player: Player) => void;
@@ -23,6 +24,7 @@ interface UnassignedDrawerProps {
 export const UnassignedDrawer = ({
   players,
   selectedPlayerId,
+  selectedFromPositionId,
   mobileOpen,
   desktopOpen,
   desktopVisible = true,
@@ -47,14 +49,15 @@ export const UnassignedDrawer = ({
   const handleDrop = (event: DragEvent<HTMLElement>, desktop = false) => {
     event.preventDefault();
     const playerId = event.dataTransfer.getData("text/player-id");
-    if (playerId) {
-      onUnassignPlayer(playerId);
+    const fromPositionId = event.dataTransfer.getData("text/from-position-id");
+    if (playerId && fromPositionId) {
+      onUnassignPlayer(playerId, fromPositionId);
       if (desktop) onDesktopDrop();
     }
   };
 
   const moveSelectedToUnassigned = () => {
-    if (selectedPlayerId) onUnassignPlayer(selectedPlayerId);
+    if (selectedPlayerId && selectedFromPositionId) onUnassignPlayer(selectedPlayerId, selectedFromPositionId);
     else onMobileOpenChange(!mobileOpen);
   };
 
@@ -100,7 +103,7 @@ export const UnassignedDrawer = ({
             onChange={(event) => setQuery(event.target.value)}
           />
           <button className="add-player-button" type="button" onClick={onRequestAddPlayer}>Add player</button>
-          {selectedPlayerId ? <button className="move-selected-button" type="button" onClick={() => onUnassignPlayer(selectedPlayerId)}>Move selected here</button> : null}
+          {selectedPlayerId && selectedFromPositionId ? <button className="move-selected-button" type="button" onClick={() => onUnassignPlayer(selectedPlayerId, selectedFromPositionId)}>Move selected here</button> : null}
         </div>
         <div className="unassigned-list">
           {filtered.length ? filtered.map((player) => rosterRow(player)) : <p className="empty-roster-search">No matching players.</p>}
@@ -112,7 +115,7 @@ export const UnassignedDrawer = ({
       <section className={`mobile-unassigned${mobileOpen ? " open" : ""}`} aria-label="Unassigned players" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
         <button className="mobile-unassigned-bar" type="button" aria-expanded={mobileOpen} onClick={moveSelectedToUnassigned}>
           <RosterIcon />
-          <strong>{selectedPlayerId ? "Move selected to Unassigned" : "Unassigned"}</strong>
+          <strong>{selectedPlayerId && selectedFromPositionId ? "Move selected to Unassigned" : "Unassigned"}</strong>
           <span>{players.length}</span>
           <ChevronIcon className={mobileOpen ? "open" : ""} />
         </button>

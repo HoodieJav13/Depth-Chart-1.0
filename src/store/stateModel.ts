@@ -120,30 +120,36 @@ export const normalizeState = (candidate: unknown): DepthChartState => {
   const validIds = new Set([...seedIds, ...addedIds]);
   const rawAssignments = readAssignments(raw.assignments);
   for (const formation of formationConfig.formations) {
-    const seen = new Set<string>();
+    const starterIds = new Set<string>();
     const rawFormation = rawAssignments[formation.id];
     const sourceFormation =
       rawFormation && typeof rawFormation === "object"
         ? (rawFormation as Record<string, unknown>)
         : {};
 
-    for (const position of formation.positions) {
+    const orderedPositions = [...formation.positions].sort(
+      (left, right) => left.listOrder - right.listOrder,
+    );
+    for (const position of orderedPositions) {
       const source = sourceFormation[position.id];
       if (!Array.isArray(source)) continue;
-      next.assignments[formation.id][position.id] = source.filter(
-        (id): id is string => {
-          if (
-            typeof id !== "string" ||
-            !validIds.has(id) ||
-            next.archivedPlayerIds.includes(id) ||
-            seen.has(id)
-          ) {
-            return false;
-          }
-          seen.add(id);
-          return true;
-        },
-      );
+      const positionIds = new Set<string>();
+      const normalized: string[] = [];
+      for (const id of source) {
+        if (
+          typeof id !== "string" ||
+          !validIds.has(id) ||
+          next.archivedPlayerIds.includes(id) ||
+          positionIds.has(id)
+        ) {
+          continue;
+        }
+        positionIds.add(id);
+        if (normalized.length === 0 && starterIds.has(id)) continue;
+        if (normalized.length === 0) starterIds.add(id);
+        normalized.push(id);
+      }
+      next.assignments[formation.id][position.id] = normalized;
     }
   }
 

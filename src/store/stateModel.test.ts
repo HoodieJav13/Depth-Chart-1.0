@@ -34,4 +34,67 @@ describe("stateModel", () => {
     });
     expect(effectivePlayers(state).some((player) => player.id === "p02")).toBe(false);
   });
+
+  it("preserves one defensive starter and the same player's backups at other positions", () => {
+    const state = normalizeState({
+      version: 2,
+      assignments: {
+        "defense-base": {
+          "def-alpha": ["p01"],
+          "def-mike": ["p02", "p01"],
+          "def-fs": ["p03", "p04", "p01"],
+        },
+      },
+      addedPlayers: [],
+      playerOverrides: {},
+      archivedPlayerIds: [],
+      revision: 4,
+    });
+
+    expect(state.assignments["defense-base"]["def-alpha"]).toEqual(["p01"]);
+    expect(state.assignments["defense-base"]["def-mike"]).toEqual(["p02", "p01"]);
+    expect(state.assignments["defense-base"]["def-fs"]).toEqual(["p03", "p04", "p01"]);
+  });
+
+  it("keeps the first starter by list order and removes only a later conflicting starter", () => {
+    const state = normalizeState({
+      version: 2,
+      assignments: {
+        "defense-base": {
+          "def-le": ["p01"],
+          "def-mike": ["p02", "p01"],
+          "def-alpha": ["p01", "p03"],
+          "def-fs": ["p04", "p01"],
+        },
+      },
+      addedPlayers: [],
+      playerOverrides: {},
+      archivedPlayerIds: [],
+      revision: 4,
+    });
+
+    expect(state.assignments["defense-base"]["def-le"]).toEqual(["p01"]);
+    expect(state.assignments["defense-base"]["def-mike"]).toEqual(["p02", "p01"]);
+    expect(state.assignments["defense-base"]["def-alpha"]).toEqual(["p03"]);
+    expect(state.assignments["defense-base"]["def-fs"]).toEqual(["p04", "p01"]);
+  });
+
+  it("deduplicates a player only within the same position depth list", () => {
+    const state = normalizeState({
+      version: 2,
+      assignments: {
+        "defense-base": {
+          "def-bandit": ["p02", "p01", "p01"],
+          "def-fs": ["p03", "p01"],
+        },
+      },
+      addedPlayers: [],
+      playerOverrides: {},
+      archivedPlayerIds: [],
+      revision: 4,
+    });
+
+    expect(state.assignments["defense-base"]["def-bandit"]).toEqual(["p02", "p01"]);
+    expect(state.assignments["defense-base"]["def-fs"]).toEqual(["p03", "p01"]);
+  });
 });
