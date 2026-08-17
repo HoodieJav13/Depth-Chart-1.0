@@ -284,7 +284,7 @@ button:focus-visible {
 }
 
 .position-node.lane-position .opposite-position-chip {
-  max-width: 30px;
+  max-width: 100%;
 }
 
 .field-position-card {
@@ -403,7 +403,9 @@ button:focus-visible {
 }
 
 .opposite-position-chip {
-  max-width: 46px;
+  max-width: 100%;
+  flex: 0 1 auto;
+  min-width: 0;
   padding: 2px 4px;
   overflow: hidden;
   border: 1px solid #53666f;
@@ -414,7 +416,7 @@ button:focus-visible {
   font-weight: 850;
   letter-spacing: 0.04em;
   line-height: 1.15;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
