@@ -17,6 +17,8 @@ export interface PositionConfig {
   x: number;
   y: number;
   listOrder: number;
+  /** Presentation-only. Spoken role name shown above the field card. */
+  roleName?: string;
 }
 
 export interface FormationConfig {
