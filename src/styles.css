@@ -138,49 +138,41 @@ button:focus-visible {
 
 .football-field {
   position: relative;
+  display: grid;
   height: 100%;
-  min-height: 620px;
+  min-height: 560px;
+  padding: clamp(14px, 2.4vh, 30px) 16px;
   overflow: hidden;
-  border: 1px solid #2f3b3d;
-  background-color: var(--field);
+  place-items: center;
+  border: 1px solid #1b2530;
+  border-radius: 10px;
+  background:
+    radial-gradient(120% 84% at 50% 6%, rgba(31, 52, 45, 0.5) 0%, rgba(6, 11, 16, 0) 62%),
+    linear-gradient(180deg, #0a1219 0%, #060a0f 58%, #04070a 100%);
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.6);
+}
+
+/* Football context only — the cards carry the composition. */
+.football-field::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
     transparent calc(10% - 1px),
-    var(--field-line) calc(10% - 1px),
-    var(--field-line) 10%
-  );
-  box-shadow: inset 0 0 72px rgba(0, 0, 0, 0.36);
-}
-
-.football-field::before,
-.football-field::after {
-  position: absolute;
-  top: 4%;
-  bottom: 4%;
-  width: 10px;
-  border-top: 1px solid var(--field-line);
-  border-bottom: 1px solid var(--field-line);
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--field-line) 0 2px,
-    transparent 2px 22px
+    rgba(190, 226, 214, 0.05) calc(10% - 1px),
+    rgba(190, 226, 214, 0.05) 10%
   );
   content: "";
-}
-
-.football-field::before {
-  left: 34%;
-}
-
-.football-field::after {
-  right: 34%;
+  pointer-events: none;
 }
 
 .field-label {
   position: absolute;
+  z-index: 0;
   bottom: 6%;
-  color: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.028);
   font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
   font-size: clamp(3.5rem, 7vw, 7rem);
   letter-spacing: 0.08em;
@@ -199,110 +191,113 @@ button:focus-visible {
   transform: rotate(180deg);
 }
 
-.formation-coordinate-layer {
-  position: absolute;
-  top: -43%;
-  right: 0;
-  left: 0;
-  height: 210%;
-}
+/* ---- Semantic bands ---- */
 
-.line-of-scrimmage {
-  position: absolute;
-  z-index: 3;
-  right: 5%;
-  left: 5%;
-  border-top: 1px solid rgba(244, 125, 35, 0.38);
-  pointer-events: none;
-}
+.formation-bands {
+  --card-width: clamp(78px, 8vw, 116px);
+  --card-width-compact: clamp(54px, 5.3vw, 78px);
+  --card-gap: clamp(7px, 0.85vw, 12px);
 
-.line-of-scrimmage::after {
-  position: absolute;
-  top: -16px;
-  left: 0;
-  color: rgba(255, 184, 133, 0.68);
-  content: "LOS";
-  font-size: 0.6875rem;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-}
-
-.position-node {
-  position: absolute;
-  z-index: 5;
+  position: relative;
+  z-index: 1;
   display: flex;
-  width: 108px;
+  width: 100%;
   flex-direction: column;
   align-items: center;
-  transform: translate(-50%, -50%);
+  justify-content: center;
+  gap: clamp(10px, 1.8vh, 22px);
 }
 
-.position-node.expanded {
-  z-index: 30;
+.formation-band {
+  display: flex;
+  max-width: 100%;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--card-gap);
 }
 
-.position-lane {
-  position: absolute;
-  z-index: 6;
-  display: grid;
-  gap: clamp(6px, 0.65vw, 10px);
-  width: clamp(360px, 32vw, 400px);
-  transform: translate(-50%, -50%);
+.position-group {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: clamp(4px, 0.4vw, 7px);
 }
 
-.position-lane.offensive-line {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+/* ---- Position column: label block, card, backup strips ---- */
+
+.position-column {
+  display: flex;
+  width: var(--card-width);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
 }
 
-.position-lane.defensive-front {
-  width: clamp(300px, 28vw, 350px);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.position-column.compact {
+  width: var(--card-width-compact);
 }
 
-.position-node.lane-position {
-  position: relative;
-  width: auto;
-  min-width: 0;
-  transform: none;
+/*
+ * Fixed height, bottom-aligned: a role name that wraps to two lines must not push its card
+ * out of line with the rest of the band.
+ */
+.position-label-block {
+  display: flex;
+  height: 34px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  text-align: center;
 }
 
-.position-node.lane-position .field-position-card {
-  width: 100%;
-  min-width: 0;
-  min-height: 94px;
-  padding-right: 2px;
-  padding-left: 2px;
-}
-
-.position-node.lane-position .field-player-name {
-  font-size: 0.6875rem;
+.position-role-name {
+  max-width: 100%;
+  color: #7f929c;
+  font-size: 0.625rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  line-height: 1.05;
+  text-transform: uppercase;
   overflow-wrap: anywhere;
 }
 
-.position-node.lane-position .field-jersey-number {
-  font-size: 1.85rem;
+.position-code {
+  color: #eef4f6;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: 1.06rem;
+  letter-spacing: 0.075em;
+  line-height: 1;
 }
 
-.position-node.lane-position .opposite-position-chip {
-  max-width: 30px;
+.position-column.compact .position-role-name {
+  display: none;
 }
+
+.position-column.compact .position-code {
+  font-size: 0.95rem;
+}
+
+/* ---- Card ---- */
 
 .field-position-card {
   position: relative;
   display: flex;
-  width: 108px;
-  min-height: 90px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 6px 8px 10px;
-  border: 1px solid #687b84;
-  border-radius: 7px;
-  background: #1b313c;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(206, 142, 78, 0.42);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(30, 45, 58, 0.96) 0%, rgba(13, 21, 29, 0.98) 62%),
+    #0d151d;
   color: var(--text);
   cursor: pointer;
-  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 209, 163, 0.14),
+    0 8px 20px rgba(0, 0, 0, 0.46);
 }
 
 .field-position-card[draggable="true"] {
@@ -314,66 +309,44 @@ button:focus-visible {
 }
 
 .field-position-card:hover {
-  border-color: #94a7af;
-  background: #213b48;
+  border-color: rgba(236, 173, 106, 0.72);
 }
 
 .field-position-card.empty {
-  min-height: 90px;
   border-style: dashed;
-  background: rgba(20, 40, 45, 0.82);
+  border-color: rgba(129, 145, 154, 0.4);
+  background: rgba(12, 20, 27, 0.72);
+  box-shadow: none;
 }
 
-.field-position-card.placement-target {
-  border-color: rgba(225, 171, 126, 0.62);
-  box-shadow: inset 0 0 0 1px rgba(244, 125, 35, 0.12), 0 7px 18px rgba(0, 0, 0, 0.34);
-}
-
-.field-position-card.placement-target:hover,
-.field-position-card.placement-target:focus-visible {
-  border-color: var(--orange);
-  box-shadow: 0 0 0 1px var(--orange), 0 0 22px rgba(244, 125, 35, 0.24);
-}
-
-.field-position-card.selected-source {
-  border-color: var(--orange);
-  background: #3a2a21;
-  box-shadow: 0 0 0 2px var(--orange), 0 0 26px rgba(244, 125, 35, 0.32);
-}
-
-.field-card-header {
+/*
+ * The position code already anchors the column in the label block above the card, so the
+ * card's top row carries only cross-listing and depth.
+ */
+.field-card-top {
+  position: relative;
+  z-index: 2;
   display: flex;
-  width: 100%;
-  min-width: 0;
-  min-height: 19px;
-  align-items: flex-start;
-  justify-content: space-between;
+  min-height: 17px;
+  align-items: center;
+  justify-content: flex-end;
   gap: 3px;
+  padding: 4px 5px 0;
   pointer-events: none;
 }
 
-.field-card-meta {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 3px;
+.opposite-position-chip + .additional-depth {
+  flex: 0 0 auto;
 }
 
-.field-position-chip {
-  flex: 0 0 auto;
-  color: #aebbc1;
-  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-  font-size: 0.6875rem;
-  letter-spacing: 0.07em;
-  line-height: 1;
+.field-card-top .opposite-position-chip {
+  margin-right: auto;
 }
 
 .additional-depth {
   display: grid;
-  min-width: 20px;
-  height: 19px;
+  min-width: 19px;
+  height: 18px;
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid #59676e;
@@ -384,27 +357,11 @@ button:focus-visible {
   font-weight: 800;
 }
 
-.field-jersey-number {
-  color: var(--orange);
-  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-  font-size: 2.15rem;
-  letter-spacing: 0.035em;
-  line-height: 0.95;
-}
-
-.field-player-name {
-  display: block;
-  color: #f7fafb;
-  font-size: 0.75rem;
-  font-weight: 750;
-  line-height: 1.08;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
 .opposite-position-chip {
-  max-width: 46px;
-  padding: 2px 4px;
+  max-width: 100%;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 1px 4px;
   overflow: hidden;
   border: 1px solid #53666f;
   border-radius: 99px;
@@ -414,8 +371,182 @@ button:focus-visible {
   font-weight: 850;
   letter-spacing: 0.04em;
   line-height: 1.15;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Hero zone: the dominant area. Architected so a photo can replace the number later. */
+.field-card-hero {
+  position: relative;
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+}
+
+.field-card-hero::before {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(78% 62% at 50% 42%, rgba(244, 125, 35, 0.2) 0%, rgba(244, 125, 35, 0) 70%),
+    linear-gradient(148deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 46%);
+  content: "";
+}
+
+/* Subtle wing geometry. */
+.field-card-hero::after {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: 190%;
+  height: 68%;
+  background: linear-gradient(
+    102deg,
+    rgba(244, 125, 35, 0) 42%,
+    rgba(244, 125, 35, 0.11) 50%,
+    rgba(244, 125, 35, 0) 58%
+  );
+  content: "";
+  transform: translate(-50%, -50%) rotate(-15deg);
+}
+
+.field-jersey-number,
+.field-hero-initials {
+  position: relative;
+  z-index: 1;
+  padding: 0 3px;
+  color: var(--orange);
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.03em;
+  line-height: 0.92;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.62);
+}
+
+.field-jersey-number {
+  font-size: clamp(1.9rem, 3.3vw, 3rem);
+}
+
+.field-hero-initials {
+  font-size: clamp(1.4rem, 2.3vw, 2.05rem);
+}
+
+.field-hero-empty {
+  position: relative;
+  z-index: 1;
+  color: rgba(190, 205, 213, 0.45);
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: clamp(1.1rem, 1.9vw, 1.6rem);
+  letter-spacing: 0.06em;
+}
+
+.position-column.compact .field-jersey-number {
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+}
+
+.position-column.compact .field-hero-initials {
+  font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+}
+
+/* Nameplate: dedicated high-contrast bar, never truncated by decoration. */
+.field-card-nameplate {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  min-height: 30px;
+  align-content: center;
+  padding: 4px 5px 5px;
+  border-top: 1px solid rgba(206, 142, 78, 0.34);
+  background: linear-gradient(180deg, rgba(6, 11, 15, 0.86) 0%, rgba(4, 8, 11, 0.96) 100%);
+}
+
+.field-player-name {
+  display: block;
+  color: #fbfdfd;
+  font-size: 0.75rem;
+  font-weight: 750;
+  line-height: 1.1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.position-column.compact .field-player-name {
+  font-size: 0.6875rem;
+}
+
+.position-column.compact .field-card-nameplate {
+  min-height: 27px;
+  padding: 3px 2px 4px;
+}
+
+/* ---- Placement states: source, hovered target, quiet valid target ---- */
+
+.field-position-card.placement-target {
+  border-color: rgba(225, 171, 126, 0.62);
+  box-shadow:
+    inset 0 0 0 1px rgba(244, 125, 35, 0.12),
+    0 8px 20px rgba(0, 0, 0, 0.46);
+}
+
+.field-position-card.placement-target:hover,
+.field-position-card.placement-target:focus-visible {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange), 0 0 22px rgba(244, 125, 35, 0.26);
+}
+
+.field-position-card.selected-source {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px var(--orange), 0 0 26px rgba(244, 125, 35, 0.34);
+}
+
+.position-column.expanded .field-position-card {
+  border-color: rgba(236, 173, 106, 0.85);
+}
+
+/* ---- Named backup strips ---- */
+
+.depth-strips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.depth-strip {
+  display: flex;
+  width: 100%;
+  min-height: 21px;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 5px;
+  border: 1px solid #2b3a45;
+  border-radius: 4px;
+  background: rgba(13, 22, 29, 0.9);
+  color: #c6d2d7;
+  cursor: pointer;
+  font-size: 0.6875rem;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.depth-strip:hover {
+  border-color: #4c626f;
+  background: rgba(21, 34, 43, 0.95);
+}
+
+.depth-strip-number {
+  flex: 0 0 auto;
+  color: var(--orange);
+  font-weight: 850;
+}
+
+/*
+ * Backup names wrap rather than ellipsize. Truncating a name so it still reads as a
+ * complete one is the bug this project has already shipped twice.
+ */
+.depth-strip-name {
+  min-width: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 .player-card {
@@ -814,10 +945,12 @@ button:focus-visible {
   overflow-y: auto;
 }
 
+/* Side-by-side right surface narrows the field; ease the cards down to match. */
 @media (min-width: 1181px) {
-  .right-surface-roster .position-lane.offensive-line,
-  .right-surface-position .position-lane.offensive-line {
-    width: 340px;
+  .right-surface-roster .formation-bands,
+  .right-surface-position .formation-bands {
+    --card-width: clamp(76px, 6.2vw, 96px);
+    --card-width-compact: clamp(52px, 4.2vw, 62px);
   }
 }
 
@@ -975,48 +1108,21 @@ button:focus-visible {
     min-height: 0;
   }
 
-  .position-node {
-    width: clamp(75px, 6.8vw, 80px);
+  .formation-bands {
+    --card-width: clamp(74px, 8.4vw, 92px);
+    --card-width-compact: clamp(50px, 5.6vw, 62px);
+    --card-gap: clamp(6px, 0.8vw, 10px);
+
+    gap: clamp(8px, 1.4vh, 16px);
   }
 
-  .field-position-card {
-    width: 100%;
-    min-height: clamp(68px, 9.5vh, 78px);
-    padding-right: 5px;
-    padding-left: 5px;
-  }
-
-  .field-jersey-number {
-    font-size: clamp(1.7rem, 3vw, 2rem);
-  }
-
-  .field-player-name {
-    font-size: clamp(0.6875rem, 1.1vw, 0.75rem);
-  }
-
-  .position-lane {
-    width: clamp(325px, calc(32vw - 1px), 380px);
-  }
-
-  .position-lane.defensive-front {
-    width: clamp(300px, 28vw, 330px);
-  }
-
-  .position-node.lane-position .field-position-card {
-    min-height: clamp(88px, 12vh, 96px);
-  }
-
-  .position-node.lane-position .field-position-chip,
-  .position-node.lane-position .opposite-position-chip {
-    font-size: 0.6875rem;
-  }
-
-  .position-node.lane-position .field-jersey-number {
-    font-size: clamp(1.45rem, 2.5vw, 1.75rem);
-  }
-
-  .position-node.lane-position .field-player-name {
-    font-size: 0.6875rem;
+  /*
+   * Vertical space is the constraint here, so depth degrades before anything else:
+   * the second strip drops out. The card's +N badge counts every backup, so hiding a
+   * strip never makes the displayed depth wrong.
+   */
+  .depth-strip:nth-of-type(2) {
+    display: none;
   }
 }
 
