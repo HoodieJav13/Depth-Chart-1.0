@@ -18,6 +18,20 @@
   --orange: #f47d23;
   --orange-soft: rgba(244, 125, 35, 0.16);
   --shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+
+  /*
+   * Daylight tokens. Sideline use in direct sun adds reflected ambient luminance to both
+   * text and its background, which compresses contrast most severely where both are dark.
+   * These are the values whose legibility must survive that, so they run lighter than the
+   * ambient palette: --orange is kept for borders and accents, --orange-bright for the
+   * jersey numbers that are the primary recognition anchor on a field card.
+   */
+  --orange-bright: #ff9d52;
+  --card-surface-top: #2c4459;
+  --card-surface-bottom: #1a2a37;
+  --card-frame: rgba(240, 175, 112, 0.62);
+  --card-frame-hover: rgba(255, 198, 140, 0.9);
+  --label-secondary: #b0c1c9;
 }
 
 * {
@@ -253,13 +267,13 @@ button:focus-visible {
 
 .position-role-name {
   max-width: 100%;
-  color: #7f929c;
+  color: var(--label-secondary);
   font-size: 0.625rem;
   font-weight: 750;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.045em;
   line-height: 1.05;
   text-transform: uppercase;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .position-code {
@@ -288,10 +302,10 @@ button:focus-visible {
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  border: 1px solid rgba(206, 142, 78, 0.42);
+  border: 1px solid var(--card-frame);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(30, 45, 58, 0.96) 0%, rgba(13, 21, 29, 0.98) 62%),
+    linear-gradient(180deg, var(--card-surface-top) 0%, var(--card-surface-bottom) 68%),
     #0d151d;
   color: var(--text);
   cursor: pointer;
@@ -309,7 +323,7 @@ button:focus-visible {
 }
 
 .field-position-card:hover {
-  border-color: rgba(236, 173, 106, 0.72);
+  border-color: var(--card-frame-hover);
 }
 
 .field-position-card.empty {
@@ -385,12 +399,17 @@ button:focus-visible {
   overflow: hidden;
 }
 
+/*
+ * Darkens behind the jersey number rather than glowing orange behind it. The card body runs
+ * light so the card stays findable in glare; this vignette buys the number back the contrast
+ * that costs it.
+ */
 .field-card-hero::before {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(78% 62% at 50% 42%, rgba(244, 125, 35, 0.2) 0%, rgba(244, 125, 35, 0) 70%),
-    linear-gradient(148deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 46%);
+    radial-gradient(74% 60% at 50% 44%, rgba(6, 12, 18, 0.46) 0%, rgba(6, 12, 18, 0) 72%),
+    linear-gradient(148deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 46%);
   content: "";
 }
 
@@ -416,7 +435,7 @@ button:focus-visible {
   position: relative;
   z-index: 1;
   padding: 0 3px;
-  color: var(--orange);
+  color: var(--orange-bright);
   font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
   letter-spacing: 0.03em;
   line-height: 0.92;
@@ -434,7 +453,7 @@ button:focus-visible {
 .field-hero-empty {
   position: relative;
   z-index: 1;
-  color: rgba(190, 205, 213, 0.45);
+  color: rgba(206, 221, 229, 0.8);
   font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
   font-size: clamp(1.1rem, 1.9vw, 1.6rem);
   letter-spacing: 0.06em;
@@ -467,7 +486,7 @@ button:focus-visible {
   font-weight: 750;
   line-height: 1.1;
   text-align: center;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .position-column.compact .field-player-name {
@@ -518,10 +537,10 @@ button:focus-visible {
   align-items: baseline;
   gap: 4px;
   padding: 3px 5px;
-  border: 1px solid #2b3a45;
+  border: 1px solid #47606f;
   border-radius: 4px;
-  background: rgba(13, 22, 29, 0.9);
-  color: #c6d2d7;
+  background: rgba(26, 42, 55, 0.94);
+  color: #dbe5e9;
   cursor: pointer;
   font-size: 0.6875rem;
   line-height: 1.15;
@@ -535,7 +554,7 @@ button:focus-visible {
 
 .depth-strip-number {
   flex: 0 0 auto;
-  color: var(--orange);
+  color: var(--orange-bright);
   font-weight: 850;
 }
 
@@ -546,7 +565,7 @@ button:focus-visible {
 .depth-strip-name {
   min-width: 0;
   font-weight: 650;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .player-card {
@@ -1122,6 +1141,16 @@ button:focus-visible {
    * strip never makes the displayed depth wrong.
    */
   .depth-strip:nth-of-type(2) {
+    display: none;
+  }
+
+  /*
+   * Compact cards fall to ~62px here, which cannot fit a three-letter cross-listing chip
+   * beside the depth badge without clipping it. Drop the chip rather than truncate it --
+   * the depth badge is the only depth signal a compact column has, and the cross-listing
+   * is still in the position detail panel.
+   */
+  .position-column.compact .opposite-position-chip {
     display: none;
   }
 }
